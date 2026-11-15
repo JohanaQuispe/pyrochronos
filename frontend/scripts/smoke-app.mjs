@@ -44,6 +44,9 @@ global.fetch = async (url) => {
     : url.includes('/api/assistant') ? { answer: 'No hay datos recientes cargados; verifica en campo.' }
     : url.includes('/api/departments/') ? { type: 'Feature', geometry: { type: 'Polygon', coordinates: [[[-77,-12],[-76,-12],[-76,-11],[-77,-12]]] }, properties: { name: 'Lima' } }
     : url.includes('/api/recent/hotspots') ? { type: 'FeatureCollection', features: [], meta: { available: false, total: 0, shown: 0, sampled: false } }
+    : url.includes('/api/recent?') ? { available: false, reason: 'Sin datos NRT cargados.', meta: {} }
+      : url.includes('/api/geofences') ? { count: 0, items: [] }
+        : url.includes('/api/groundtruth') ? { summary: { total: 0, counts: { fuego_real: 0, quema_agricola: 0, falsa_alarma: 0 } }, items: [] }
     : url.includes('/api/hotspots') ? hotspots
       : url.includes('/api/bulletin') ? { text: 'boletin de prueba', zone: 'Peru', note: '' }
         : url.includes('/api/alert') ? {
@@ -99,7 +102,10 @@ const checks = [
   ['filtros', html.includes('Filtros')],
   ['descargas', html.includes('CSV de focos') || html.includes('Reporte ejecutivo')],
   ['semaforo', html.includes('Ventana cr')],
-  ['fetch llamado', calls >= 4],
+  ['fetch llamado', calls >= 7],
+  ['estado NRT explicado', html.includes('Sin datos NRT cargados')],
+  ['geocercas consultadas', html.includes('Geocercas registradas')],
+  ['veredictos consultados', html.includes('Veredictos registrados')],
   ['contexto climatico', /más seco de lo normal/.test(html)],
 ]
 const root = dom.window.document.getElementById('root')
