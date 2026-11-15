@@ -63,13 +63,25 @@ def detect_columns(columns: list[str]) -> dict[str, str]:
     return found
 
 
+SUPPORTED = (".csv", ".txt", ".xlsx", ".xls", ".parquet", ".pq", ".zip")
+
+
 def read_any(path: Path) -> pd.DataFrame:
-    """Lee CSV (cualquier separador), Excel o Parquet."""
+    """Lee CSV (cualquier separador), Excel, Parquet o ZIP con un CSV dentro."""
     suffix = path.suffix.lower()
     if suffix in (".parquet", ".pq"):
         return pd.read_parquet(path)
     if suffix in (".xlsx", ".xls"):
         return pd.read_excel(path)
+    if suffix == ".zip":
+        import zipfile
+
+        with zipfile.ZipFile(path) as zf:
+            names = [n for n in zf.namelist() if n.lower().endswith((".csv", ".txt"))]
+            if not names:
+                raise SystemExit(f"ERROR: {path.name} no contiene ningún CSV")
+            with zf.open(names[0]) as fh:
+                return pd.read_csv(fh, sep=",", low_memory=False, encoding="utf-8-sig")
     with path.open("r", encoding="utf-8-sig", errors="replace") as fh:
         sample = fh.read(8192)
         fh.seek(0)
@@ -79,6 +91,29 @@ def read_any(path: Path) -> pd.DataFrame:
         except csv.Error:
             sep = ","
         return pd.read_csv(fh, sep=sep, low_memory=False)
+
+
+def resolve_targets(raw: str) -> tuple[list[Path], str]:
+    """Acepta archivo, carpeta o un nombre sin extensión y devuelve qué leer."""
+    path = Path(raw).expanduser()
+    if path.is_dir():
+        found = sorted(f for f in path.rglob("*") if f.suffix.lower() in SUPPORTED and f.is_file())
+        return found, "carpeta"
+    if path.is_file():
+        return [path], "archivo"
+
+    parent = path.parent if str(path.parent) else Path(".")
+    stem = path.stem.lower()
+    if parent.is_dir():
+        same = sorted(f for f in parent.iterdir() if f.suffix.lower() in SUPPORTED
+                      and f.stem.lower() == stem and f.is_file())
+        if same:
+            return same, "mismo nombre, otra extensión"
+        parecidos = sorted(f for f in parent.iterdir() if f.suffix.lower() in SUPPORTED
+                           and f.stem.lower().startswith(stem[:10]) and f.is_file())
+        if parecidos:
+            return parecidos, "nombre parecido"
+    return [], "no encontrado"
 
 
 def to_source(value) -> int | None:
@@ -182,16 +217,49 @@ def main() -> int:
     ap.add_argument("--dedupe", default="on", choices=["on", "off"], help="quitar duplicados día+punto+sensor")
     args = ap.parse_args()
 
-    path = Path(args.file)
-    if not path.exists():
-        print(f"ERROR: no existe {path}")
+    paths, como = resolve_targets(args.file)
+    if not paths:
+        print(f"ERROR: no encuentro {args.file}")
+        parent = Path(args.file).expanduser().parent
+        if parent.is_dir():
+            print(f"Esto es lo que hay en {parent}:")
+            for f in sorted(parent.iterdir())[:25]:
+                print(f"  {f.name}")
+        print("\nPásame la ruta exacta del archivo (arrástralo a la ventana de PowerShell y copia lo que aparece).")
         return 2
 
     cfg = load_config()
-    df = read_any(path)
+    partes = []
+    for one in paths:
+        print(f"Leyendo {one.name} …")
+        part = read_any(one)
+        if part.empty:
+            print(f"  (vacío, se omite)")
+            continue
+        if len(paths) > 1:
+            part["_origen"] = one.name
+        partes.append(part)
+    if not partes:
+        print("ERROR: no se pudo leer ninguna fila.")
+        return 2
+    if len(paths) > 1 and como != "carpeta":
+        print(f"\nHay {len(paths)} archivos que coinciden con ese nombre:")
+        for one in paths:
+            print(f"  {one}")
+        print("Escríbeme la ruta completa del que quieres, sin adivinar.")
+        return 2
+    df = pd.concat(partes, ignore_index=True, sort=False)
+    if len(paths) > 1:
+        print(f"Se juntaron {len(partes)} archivo(s) ({como}).")
+    path = paths[0]
     print(f"Archivo: {path.name} · {len(df):,} filas · {len(df.columns)} columnas")
     print("Columnas:", ", ".join(str(c) for c in df.columns[:12]), "…" if len(df.columns) > 12 else "")
 
+    if "_origen" in df.columns:
+        origen = df["_origen"]
+        df = df.drop(columns=["_origen"])
+    else:
+        origen = None
     cols = detect_columns(list(df.columns))
     faltan = [f for f in REQUIRED if f not in cols]
     if faltan:
@@ -203,6 +271,8 @@ def main() -> int:
     print("Columnas reconocidas:", ", ".join(f"{k}={v}" for k, v in cols.items()))
 
     frame, report = build_frame(df, cols)
+    if origen is not None:
+        print("\n  filas por archivo:", {k: int(v) for k, v in origen.value_counts().items()})
     print("\nInforme:")
     for key, value in report.items():
         print(f"  {key}: {value}")
