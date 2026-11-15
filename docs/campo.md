@@ -27,15 +27,31 @@ python backend/scripts/bot.py --poll             # escucha y avisa (bucle)
 python backend/scripts/bot.py --poll --once      # una pasada y sale
 ```
 
-`--poll` hace long polling de la Bot API (sin librerías extra). Comandos del bot:
+`--poll` hace long polling de la Bot API (sin librerías extra).
 
-| Comando | Qué hace |
+**Se usa con botones, sin escribir nada.** La jerga («geocerca», «radio», «centro») no aparece
+delante del brigadista: se habla de *dónde estás* y *a cuántos km te aviso*.
+
+| Botón / comando | Qué hace |
 |---|---|
-| `/start` | explica el aviso y muestra el botón **📍 Compartir mi ubicación** |
-| (ubicación) | guarda la geocerca: centro + radio de 10 km |
-| `/radio 15` | cambia el radio (1 a 100 km) |
-| `/estado` | tu geocerca, focos recientes cargados y validaciones hechas |
-| `/ayuda` | lista de comandos |
+| **📍 Compartir mi ubicación** | guarda dónde está la persona (una vez; se puede repetir) |
+| **⚙️ Distancia de aviso** | botones de 5 / 10 / 20 / 50 km (también `/distancia 15`) |
+| **ℹ️ Mi estado** | dónde estás, tu distancia, focos vigilados y tus confirmaciones |
+| **❓ Ayuda** | el texto de ayuda |
+| `/start` · `/ayuda` | equivalentes escritos |
+
+Los comandos toleran lo que manda Telegram de verdad: `/radio@mi_bot 15`, `15 km`, `15km`, `7,5`.
+
+### En un grupo de brigada
+
+1. **BotFather** → `/setjoingroups` → `Enable` (el bot puede entrar en grupos).
+2. **BotFather** → `/setprivacy` → **`Disable`**. Sin esto el bot **no recibe** la ubicación que
+   comparten los miembros: el «modo privacidad» de Telegram solo le deja ver comandos.
+3. Quita el bot del grupo y **vuélvelo a añadir**: el cambio de privacidad solo aplica al entrar.
+4. Cada bombero pulsa *Compartir mi ubicación*: su posición se guarda **por persona** y los avisos
+   llegan al grupo. Dos personas en el mismo grupo con el mismo foco no generan dos mensajes.
+5. Aviso de privacidad: en un grupo **todos ven la ubicación** que se comparte. Para uso real, la
+   posición personal va por privado y el grupo se usa solo para los avisos.
 
 ## 2. Qué dispara un aviso
 

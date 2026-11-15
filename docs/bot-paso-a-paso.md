@@ -103,10 +103,18 @@ ayuda - Qué puedo hacer
 ```
 
 **f) Grupos** (si lo vas a usar con una brigada)
+
 ```
 /setjoingroups
 ```
-→ `Enable`.
+→ `Enable`
+
+```
+/setprivacy
+```
+→ **`Disable`**  ← imprescindible: con el modo privacidad activado (el de fábrica) el bot **no
+recibe** las ubicaciones que comparten los miembros del grupo, solo los comandos. Después de
+cambiarlo, **quita el bot del grupo y vuelve a añadirlo**, o el cambio no se aplica.
 
 ---
 
@@ -191,10 +199,10 @@ python backend/scripts/bot.py --poll --zone madrededios
 
 | Acción | Respuesta esperada |
 |---|---|
-| `/start` | mensaje de bienvenida + botón **📍 Compartir mi ubicación** |
-| pulsar el botón | `✅ Geocerca activada · Radio: 10 km · Centro: -12.59, -69.18` |
-| `/estado` | tu geocerca, focos recientes cargados, validaciones hechas |
-| `/radio 15` | `Radio actualizado a 15 km.` |
+| `/start` | bienvenida + los botones **📍 Compartir mi ubicación**, **⚙️ Distancia de aviso**, **ℹ️ Mi estado** |
+| pulsar *Compartir* | `✅ Listo. Te aviso si se detecta un fuego a menos de 10 km de aquí.` |
+| pulsar *Distancia de aviso* | botones de 5 / 10 / 20 / 50 km → `Listo: te aviso hasta 15 km a la redonda.` |
+| pulsar *Mi estado* | `📍 Estás en: …`, `📏 … km a la redonda`, focos vigilados, confirmaciones |
 | pulsar 🔥 / 🌾 / ❌ | `Registrado: …` y `✅ Guardado` en el chat |
 | ver el resultado | `curl -s localhost:8000/api/groundtruth` |
 
