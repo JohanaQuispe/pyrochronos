@@ -6,7 +6,7 @@ export default function TopBar({ meta, state, setState, onShortcut, downloads, o
   const { zones, coverage } = meta
   const range = showDates ? 'custom' : state.start === coverage.start && state.end === coverage.end ? 'all' : '5y'
   return (
-    <header className="relative z-30 border-b border-white/[0.12] bg-[#24364a]">
+    <header className="relative z-30 border-b border-orange-200/10 bg-[#101b2d]">
       <div className="mx-auto max-w-[1500px] px-4 sm:px-6">
         <div className="flex min-h-[74px] flex-wrap items-center gap-3 py-3 sm:gap-5">
           <a href="/" className="mr-auto flex min-w-[180px] items-center gap-3" aria-label="PyroChronos, inicio">

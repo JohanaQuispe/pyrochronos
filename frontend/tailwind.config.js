@@ -4,15 +4,14 @@ export default {
   theme: {
     extend: {
       colors: {
-        // Superficies de pizarra más claras para diferenciar secciones y controles.
-        ink: '#1b2939',
-        panel: '#233449',
-        panelHi: '#30445b',
-        line: '#50657a',
-        // El fuego es el único color con permiso para llamar la atención.
-        fire: '#f97316',
-        ember: '#fbbf24',
-        mist: '#a1a1aa',
+        // Azul noche y tonos cálidos inspirados en el logo de PyroChronos.
+        ink: '#111b2d',
+        panel: '#1b2940',
+        panelHi: '#26364e',
+        line: '#48556a',
+        fire: '#ff7927',
+        ember: '#ffd166',
+        mist: '#ded9d0',
       },
       fontFamily: {
         sans: ['Inter', 'Geist', 'system-ui', 'Segoe UI', 'Roboto', 'sans-serif'],

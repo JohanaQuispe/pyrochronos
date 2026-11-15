@@ -39,7 +39,7 @@ export default function BulletinCard({ zone }) {
       {state.error && <p role="alert" className="mt-3 text-[13px] text-red-200">{state.error}</p>}
       {state.text && (
         <>
-          <pre className="mt-3 max-h-64 overflow-auto whitespace-pre-wrap rounded-xl border border-slate-300 bg-slate-50 p-4 text-[12px] leading-relaxed text-slate-800">{state.text}</pre>
+          <pre className="mt-3 max-h-64 overflow-auto whitespace-pre-wrap rounded-xl border border-amber-200 bg-amber-50 p-4 text-[12px] leading-relaxed text-stone-900">{state.text}</pre>
           <button type="button" className="btn btn-primary mt-3" onClick={copy}>
             {state.copied ? '¡Copiado!' : 'Copiar borrador'}
           </button>

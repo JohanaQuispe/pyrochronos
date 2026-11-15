@@ -179,7 +179,7 @@ export default function MapPanel({ bbox, zone, hotspots, meta, onBBoxChange, loa
 
   return (
     <section
-      className="flex h-full min-h-[420px] flex-col overflow-hidden rounded-2xl border border-white/[0.08] bg-[#111114] shadow-soft"
+      className="flex h-full min-h-[420px] flex-col overflow-hidden rounded-2xl border border-white/[0.12] bg-panel shadow-soft"
       aria-labelledby="map-title"
     >
       <div className="flex items-center justify-between gap-2 px-4 py-3">

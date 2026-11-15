@@ -238,7 +238,7 @@ export default function App() {
         />
       )}
 
-      <div className="border-b border-white/[0.12] bg-[#2a3e53]">
+      <div className="border-b border-orange-200/10 bg-[#19263a]">
         <div className="mx-auto flex max-w-[1500px] items-center justify-between overflow-x-auto px-4 sm:px-6">
           <Tabs items={TABS} value={tab} onChange={setTab} />
           <p className="hidden text-[11px] text-zinc-600 md:block">
