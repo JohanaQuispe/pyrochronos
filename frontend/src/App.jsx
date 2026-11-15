@@ -254,6 +254,11 @@ export default function App() {
         >
           {data && state && (
             <>
+              <p className="px-1 text-[12.5px] leading-relaxed text-zinc-400">
+                <span className="text-zinc-200">Para brigadas de bomberos:</span> saber cuándo empieza su
+                temporada, si este año viene más fuerte que los anteriores y dónde mirar primero. No predice
+                incendios: el satélite ve el calor cuando el fuego ya empezó.
+              </p>
               <AlertStrip alert={alert} loading={alertLoading} dateRef={dateRef} setDateRef={setDateRef} zoneName={zoneName} />
 
               <p className="max-w-4xl px-1 text-[13px] leading-relaxed text-zinc-300">{data.summary}</p>

@@ -137,9 +137,11 @@ def build_report_html(cfg: Config, ds: Dataset, bbox, zone_name: str, start, end
 <header>
   {f'<img src="{logo}" alt="">' if logo else ''}
   <div>
-    <h1>PyroChronos · Reporte ejecutivo</h1>
+    <h1>PyroChronos · Reporte para la brigada</h1>
     <p class="sub">{html.escape(zone_name)} · {payload['meta']['start']} a {payload['meta']['end']} ·
     medida: {payload['meta']['measure_label']} armonizadas · generado {generated}</p>
+    <p class="sub">Para jefes de brigada y comités de emergencia: cuándo empieza la temporada de fuego,
+    si este periodo viene por encima o por debajo de lo normal y en qué meses conviene reforzar turnos.</p>
   </div>
 </header>
 

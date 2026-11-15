@@ -38,8 +38,9 @@ RADIUS_CHOICES = (5, 10, 20, 50)
 DEFAULT_RADIUS = 10.0
 
 WELCOME = (
-    "*PyroChronos*\n"
-    "Te aviso cuando se detecte un fuego cerca de ti, para que puedas confirmarlo antes de salir.\n\n"
+    "*PyroChronos · apoyo a la brigada*\n"
+    "Te aviso cuando el satélite detecte un fuego intenso cerca de ti, para que puedas confirmarlo "
+    "antes de salir.\n\n"
     "1️⃣ Pulsa *📍 Compartir mi ubicación* (una sola vez).\n"
     "2️⃣ Cuando llegue un aviso, dime qué era con los botones.\n"
     "3️⃣ Si quieres avisos más lejos o más cerca, pulsa *⚙️ Distancia de aviso*.\n\n"

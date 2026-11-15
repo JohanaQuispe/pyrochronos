@@ -239,7 +239,7 @@ def test_reporte_ejecutivo_es_html_con_cifras(client):
     assert r.status_code == 200
     assert r.headers["content-type"].startswith("text/html")
     html = r.text
-    assert "Reporte ejecutivo" in html
+    assert "Reporte para la brigada" in html
     assert "Cómo se armonizó" in html
     assert "Imprimir / Guardar como PDF" in html
     assert "NASA FIRMS" in html
