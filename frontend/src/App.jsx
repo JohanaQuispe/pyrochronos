@@ -87,6 +87,7 @@ export default function App() {
     const id = ++reqId.current
     const ctrl = new AbortController()
     setLoading(true)
+    setData(null)
     setError(null)
     api
       .calendar(
@@ -331,6 +332,7 @@ export default function App() {
           <div className="h-[680px] sm:h-[700px] xl:h-[calc(100vh-210px)] xl:min-h-[680px]">
             <MapPanel
               bbox={activeBBox}
+              zone={state?.zone}
               hotspots={hotspots}
               meta={data?.meta}
               onBBoxChange={onBBoxChange}
@@ -350,7 +352,7 @@ export default function App() {
             <AssistantPanel zoneParams={zoneParams} zoneName={zoneName} />
             <AlertStrip alert={alert} loading={alertLoading} dateRef={dateRef} setDateRef={setDateRef} zoneName={zoneName} />
             <ClimateCard zone={state?.zone} />
-            {state && state.zone !== 'custom' && <BulletinCard zone={state.zone} />}
+            {state && state.zone !== 'custom' && !state.zone.startsWith('d_') && <BulletinCard zone={state.zone} />}
             <section className="card p-4">
               <h2 className="label">Qué mirar aquí</h2>
               <p className="mt-2 text-[12px] leading-relaxed text-zinc-400">
@@ -366,8 +368,8 @@ export default function App() {
         </div>
 
         <div role="tabpanel" id="panel-campo" aria-labelledby="tab-campo" hidden={tab !== 'campo'} className="space-y-3">
-          <FieldPanel zone={state?.zone} zoneParams={zoneParams} />
-          {state && state.zone !== 'custom' && <BulletinCard zone={state.zone} />}
+          <FieldPanel zone={state?.zone} zoneParams={zoneParams} bbox={activeBBox} />
+          {state && state.zone !== 'custom' && !state.zone.startsWith('d_') && <BulletinCard zone={state.zone} />}
         </div>
 
         <footer className="mt-6 flex flex-wrap items-center gap-x-4 gap-y-1 border-t border-white/[0.06] pt-4 text-[10.5px] text-zinc-600">

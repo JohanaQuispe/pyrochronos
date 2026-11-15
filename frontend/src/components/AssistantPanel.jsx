@@ -23,7 +23,7 @@ export default function AssistantPanel({ zoneParams, zoneName }) {
   return <section className="card p-5" aria-labelledby="assistant-title">
     <p className="label">Consulta rápida · {zoneName || 'zona seleccionada'}</p>
     <h2 id="assistant-title" className="mt-2 text-lg font-semibold text-white">Pregúntale a PyroChronos</h2>
-    <p className="mt-1 text-[12px] leading-relaxed text-zinc-400">Asistente de respuestas acotadas, compartido con el bot de Telegram. No es un chat de Telegram ni una IA de conversación.</p>
+    <p className="mt-1 text-[12px] leading-relaxed text-zinc-400">Respuestas acotadas para la zona seleccionada. Telegram vigila la zona con la que se inició el bot; cambiar esta selección no cambia sus avisos.</p>
     <div className="mt-4 flex flex-wrap gap-2">{suggestions.map((q) => <button key={q} type="button" className="btn text-[11px]" disabled={busy} onClick={() => ask(q)}>{q}</button>)}</div>
     <div className="mt-4 max-h-72 space-y-3 overflow-y-auto" aria-live="polite" aria-label="Respuestas del asistente">
       {conversation.map((msg, i) => <div key={i} className={`rounded-xl border p-3 text-[12.5px] leading-relaxed ${msg.who === 'Tú' ? 'ml-6 border-white/10 bg-white/[0.04] text-zinc-200' : 'mr-6 border-orange-400/20 bg-orange-400/[0.04] text-zinc-200'}`}><strong className="mb-1 block text-[11px] text-zinc-400">{msg.who}</strong>{msg.text}</div>)}

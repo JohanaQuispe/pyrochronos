@@ -73,3 +73,16 @@
   de la participante. Es necesario dejar encendido el equipo y el proceso; no es un servicio 24/7.
 - La resolución temporal guardada es el día UTC, no el minuto de detección. Un foco de calor puede
   no ser un incendio; no sustituye avisos oficiales ni confirmación en campo.
+
+## Departamentos y conexión
+
+- El selector departamental usa polígonos **simplificados INEI 2007**; fuente, licencia y límites en
+  `data/geo/README.md`. No son fronteras oficiales actuales y la precisión cerca de los bordes es
+  limitada. Los focos se filtran antes de agregarse en celdas-día. Cada celda fronteriza puede
+  contener focos de más de un departamento.
+- El filtro de la web no cambia la zona del bot ni el radio de Telegram. La meteorología POWER no
+  se ha precargado por departamento; el boletín preexistente solo está disponible en zonas originales.
+- Un `Failed to fetch` indica una conexión fallida entre navegador y servidor: no demuestra falta
+  de datos. La causa concreta en el equipo de la participante está **POR VERIFICAR**.
+- Se corrigió la conversión de fechas de datos NRT para versiones recientes de pandas. La cuenta
+  «últimos 7 días» se calcula respecto de la fecha UTC actual, no del último día guardado.

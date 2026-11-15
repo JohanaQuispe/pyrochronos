@@ -37,9 +37,9 @@ def _logo() -> str:
     return ""
 
 
-def build_report_html(cfg: Config, ds: Dataset, bbox, zone_name: str, start, end) -> str:
+def build_report_html(cfg: Config, ds: Dataset, bbox, zone_name: str, start, end, recent_selector=None) -> str:
     payload = build_calendar(cfg, ds, bbox, start, end, "month", cfg.default_measure, "both", zone_name)
-    alert = build_alert(cfg, ds, bbox, zone_name)
+    alert = build_alert(cfg, ds, bbox, zone_name, recent_selector=recent_selector)
     cal = payload["calendar"]
     cards = payload["cards"]
     calib = payload["calibration"]

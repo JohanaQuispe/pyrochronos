@@ -6,10 +6,11 @@ from __future__ import annotations
 
 import hashlib
 import json
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import date, datetime, timezone
 from functools import lru_cache
 from pathlib import Path
+from threading import Lock
 
 import numpy as np
 import pandas as pd
@@ -26,6 +27,7 @@ class Dataset:
     generated_at: str
     source_version: str
     cell_deg: float = 0.01
+    _cells_lock: Lock = field(default_factory=Lock, init=False, repr=False, compare=False)
 
     @property
     def start(self) -> date:
@@ -40,10 +42,12 @@ class Dataset:
         """Celdas unicas por dia, celda y satelite (medida principal). Se calcula una vez."""
         cached = getattr(self, "_cells", None)
         if cached is None:
-            from .grid import build_cells
-
-            cached = build_cells(self.df, self.cell_deg)
-            self._cells = cached
+            with self._cells_lock:
+                cached = getattr(self, "_cells", None)
+                if cached is None:
+                    from .grid import build_cells
+                    cached = build_cells(self.df, self.cell_deg)
+                    self._cells = cached
         return cached
 
     def coverage(self) -> dict:

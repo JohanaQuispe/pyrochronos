@@ -8,7 +8,13 @@ function qs(params) {
 }
 
 async function get(path, params, signal) {
-  const res = await fetch(`${BASE}${path}?${qs(params)}`, { signal })
+  let res
+  try {
+    res = await fetch(`${BASE}${path}?${qs(params)}`, { signal })
+  } catch (err) {
+    if (err.name === 'AbortError') throw err
+    throw new Error('No hay conexión con el servidor de PyroChronos. Comprueba que la app esté iniciada y vuelve a cargar la página.')
+  }
   if (!res.ok) {
     let detail = `Error ${res.status}`
     try {
@@ -22,6 +28,7 @@ async function get(path, params, signal) {
 
 export const api = {
   meta: (signal) => get('/api/meta', {}, signal),
+  department: (key, signal) => get(`/api/departments/${encodeURIComponent(key)}`, {}, signal),
   calendar: (params, signal) => get('/api/calendar', params, signal),
   hotspots: (params, signal) => get('/api/hotspots', params, signal),
   recentHotspots: (params, signal) => get('/api/recent/hotspots', params, signal),

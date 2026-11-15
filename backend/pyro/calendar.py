@@ -120,7 +120,7 @@ def build_calendar(
         values[i, j] = row.value
         estimated[i, j] = bool(row.estimated)
         fallback[i, j] = bool(row.factor_fallback)
-        levels[i, j] = row.anomaly_level
+        levels[i, j] = row.anomaly_level if isinstance(row.anomaly_level, str) else None
         pcts[i, j] = row.anomaly_pct
 
     # --- "sin dato" frente a cero -------------------------------------------
@@ -180,7 +180,7 @@ def build_calendar(
                 "value": float(last["value"]),
                 "median": float(hist.median()) if len(hist) else None,
                 "delta_pct": None,
-                "level": last["anomaly_level"],
+                "level": last["anomaly_level"] if isinstance(last["anomaly_level"], str) else None,
                 "level_label": anom.plain_level(last["anomaly_level"]),
             }
             if len(hist) and hist.median() > 0:

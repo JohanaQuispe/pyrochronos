@@ -61,7 +61,7 @@ def classify(series: pd.DataFrame, granularity: str, cfg: dict) -> pd.DataFrame:
             level_out[i] = "normal"
 
     out["anomaly_pct"] = pct_out
-    out["anomaly_level"] = level_out
+    out["anomaly_level"] = pd.Series(level_out, index=out.index, dtype=object)
     out["history_years"] = n_years_out
     return out
 
@@ -72,4 +72,4 @@ def plain_level(level: str | None) -> str:
         "alto": "por encima de lo normal",
         "normal": "dentro de lo normal",
         None: "sin historial suficiente",
-    }[level if level else None]
+    }.get(level if isinstance(level, str) else None, "sin historial suficiente")

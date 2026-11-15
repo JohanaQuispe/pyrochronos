@@ -61,6 +61,7 @@ def build_alert(
     zone_name: str,
     reference_date: date | None = None,
     lookahead_weeks: int = 4,
+    recent_selector=None,
 ) -> dict:
     ref = reference_date or date.today()
     weekly = build_calendar(cfg, ds, bbox, ds.start, ds.end, "week", cfg.default_measure, "both", zone_name)
@@ -108,7 +109,7 @@ def build_alert(
         reasons.append(f"Las próximas {len(window)} semanas son de baja actividad histórica en esta zona.")
 
     # --- actividad reciente observada (si hay NRT cargado) --------------------
-    recent = nrt.stats(cfg, bbox)
+    recent = nrt.stats(cfg, bbox, selector=recent_selector) if recent_selector else nrt.stats(cfg, bbox)
     recent_ratio = None
     if recent.get("available") and not recent.get("empty"):
         det = build_calendar(cfg, ds, bbox, ds.start, ds.end, "week", "detections", "both", zone_name)

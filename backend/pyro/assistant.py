@@ -13,13 +13,13 @@ def _normalize(text: str) -> str:
     return ''.join(c for c in unicodedata.normalize('NFKD', text.lower()) if not unicodedata.combining(c))
 
 
-def answer_question(text: str, cfg: Config, ds: Dataset, bbox, zone_name: str) -> str:
+def answer_question(text: str, cfg: Config, ds: Dataset, bbox, zone_name: str, recent_selector=None) -> str:
     question = _normalize(text.strip())
     if any(word in question for word in ('viento', 'ruta', 'carretera', 'propagacion', 'vivienda', 'agua', 'hidrante')):
         return ('No tengo viento puntual, rutas ni cercanía a viviendas o agua. Consulta fuentes operativas '
                 'y verifica en campo; no puedo indicar una ruta segura ni cómo se propagará el fuego.')
     if any(word in question for word in ('temporada', 'semaforo', 'estacional', 'historico', 'historia', 'calendario')):
-        alert = build_alert(cfg, ds, bbox, zone_name)
+        alert = build_alert(cfg, ds, bbox, zone_name, recent_selector=recent_selector)
         if not alert.get('available', True):
             return f"{zone_name}: no hay historial suficiente para este cálculo. No es un pronóstico de incendios."
         return (f"{zone_name}: {alert.get('label', 'sin información')}. "
@@ -27,7 +27,7 @@ def answer_question(text: str, cfg: Config, ds: Dataset, bbox, zone_name: str) -
                 "Es una referencia histórica, no indica focos activos ni predice incendios. "
                 "Las cifras armonizadas están en revisión.")
     if any(word in question for word in ('foco', 'incendio', 'fuego', 'calor', 'punto', 'ocurriendo', 'pasando', 'actual', 'reciente', 'alerta', 'hay algo')):
-        recent = nrt.stats(cfg, bbox)
+        recent = nrt.stats(cfg, bbox, selector=recent_selector) if recent_selector else nrt.stats(cfg, bbox)
         info = recent.get('meta') or {}
         fetched = info.get('fetched_at') or 'fecha de descarga desconocida'
         if not recent.get('available'):

@@ -140,7 +140,7 @@ def save_recent(cfg: Config, df: pd.DataFrame, sources: tuple[str, ...], days: i
     return meta
 
 
-def stats(cfg: Config, bbox: tuple[float, float, float, float]) -> dict:
+def stats(cfg: Config, bbox: tuple[float, float, float, float], selector=None) -> dict:
     """Resumen de los datos recientes dentro de una zona (o "no disponible")."""
     df, meta = load_recent(cfg)
     if df is None:
@@ -151,13 +151,16 @@ def stats(cfg: Config, bbox: tuple[float, float, float, float]) -> dict:
     mask = ((df["lat"] >= bbox[1]) & (df["lat"] <= bbox[3])
             & (df["lon"] >= bbox[0]) & (df["lon"] <= bbox[2]))
     sub = df.loc[mask]
+    if selector is not None:
+        sub = selector(sub)
     if sub.empty:
         return {"available": True, "empty": True, "total": 0, "meta": meta,
                 "reason": "Hay datos recientes cargados, pero no en esta zona."}
-    days = (date(1970, 1, 1) + pd.to_timedelta(sub["day"].astype("int64"), unit="D")).dt.date
+    days = pd.to_datetime(sub["day"].astype("int64"), unit="D").dt.date
     per_day = sub.groupby(sub["day"]).size()
     last_day = max(days) if len(days) else None
-    last7 = sub[sub["day"] >= (max(sub["day"]) - 6)]
+    today = (datetime.now(timezone.utc).date() - date(1970, 1, 1)).days
+    last7 = sub[(sub["day"] >= today - 6) & (sub["day"] <= today)]
     return {
         "available": True,
         "empty": False,
