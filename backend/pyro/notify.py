@@ -33,7 +33,10 @@ def build_bulletin(cfg: Config, ds: Dataset, zone_key: str | None = None, years_
     lines = [f"*PyroChronos · {payload['meta']['zone']}*"]
     lines.append(f"Datos NASA FIRMS hasta {payload['meta']['coverage']['end']} (histórico, no tiempo real).")
 
-    if cards.get("most_active_month"):
+    if cards.get("season"):
+        season = cards["season"]
+        lines.append(f"· Temporada de fuego: *{season['label']}* (pico en {season['peak_name']}).")
+    elif cards.get("most_active_month"):
         lines.append(f"· Temporada de fuego: el mes con más actividad es *{cards['most_active_month']['name']}*.")
     if cards.get("most_active_year"):
         lines.append(f"· Año más activo del registro: *{cards['most_active_year']['period_year']}*.")

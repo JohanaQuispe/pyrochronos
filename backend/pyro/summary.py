@@ -38,34 +38,34 @@ def build_summary(cards: dict, coverage: dict, calibration: dict, granularity: s
         )
     if cards.get("most_active_month") and not cards.get("season"):
         c = cards["most_active_month"]
-        parts.append(f"El mes con mas actividad en toda la serie es {month_name(c['period_index'])}.")
+        parts.append(f"El mes con más actividad en toda la serie es {month_name(c['period_index'])}.")
     if cards.get("most_active_year"):
         c = cards["most_active_year"]
-        parts.append(f"El ano con mas actividad es {c['period_year']}.")
+        parts.append(f"El año con más actividad es {c['period_year']}.")
 
     last = cards.get("last_month")
     if last:
         direction = "por encima" if (last.get("delta_pct") or 0) > 0 else "por debajo"
         if last.get("delta_pct") is None:
             parts.append(
-                f"El ultimo mes con datos es {month_name(last['period_index'])} de {last['period_year']}, "
+                f"El último mes con datos es {month_name(last['period_index'])} de {last['period_year']}, "
                 "pero no hay historial suficiente para compararlo."
             )
         else:
             parts.append(
-                f"El ultimo mes con datos es {month_name(last['period_index'])} de {last['period_year']}: "
-                f"quedo {abs(last['delta_pct']):.0f}% {direction} de la mediana historica de ese mes "
+                f"El último mes con datos es {month_name(last['period_index'])} de {last['period_year']}: "
+                f"quedó {abs(last['delta_pct']):.0f}% {direction} de la mediana histórica de ese mes "
                 f"({last['level_label']})."
             )
     if calibration.get("agreement_r") is not None:
         r = calibration["agreement_r"]
         quality = "alta" if r >= 0.9 else "media" if r >= 0.7 else "baja"
         parts.append(
-            f"En los anos en que MODIS y VIIRS coinciden, sus series se parecen mucho "
+            f"En los años en que MODIS y VIIRS coinciden, sus series se parecen mucho "
             f"(correlacion {r:.2f}, concordancia {quality})."
         )
     parts.append(
-        "El calendario es historico: sirve para ver patrones y periodos criticos, no para detectar "
+        "El calendario es histórico: sirve para ver patrones y periodos críticos, no para detectar "
         "incendios en el momento."
     )
     return " ".join(parts)
