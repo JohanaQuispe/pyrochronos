@@ -35,6 +35,16 @@
 8. **El aviso automático por hora** (`watch_alerts.py --loop 3600 --send`) no se ha ejecutado
    todavía en un equipo con internet.
 
+## Validación retrospectiva
+
+- Probada con el **parquet del repositorio** (1 323 016 filas): validación mensual con exclusión del
+  año evaluado, 14 años (2012–2025), mediana del error absoluto anual **7,63 %**, promedio **7,00 %**
+  y máximo **16,54 %**, frente a la unión MODIS+VIIRS. Ver `docs/metodologia.md` para los límites.
+- **POR VERIFICAR en el equipo de la participante:** ejecutar `python backend/scripts/validacion_retrospectiva.py`
+  con su parquet de 2 212 061 filas. No extrapolar el 7,63 % ni redondearlo a 8 % para esa base.
+  La prueba no comprueba incendios de campo, no mide error real anterior a 2012 y no resuelve la
+  estimación de VIIRS sin MODIS.
+
 ## Cifras locales y armonización
 
 - **Resultado comunicado por la participante:** `numeros_pitch.py` sobre su parquet local informa

@@ -39,6 +39,22 @@ convertir VIIRS por sí solo a la unión. Puede inflar estimaciones, especialmen
 Hay que corregir o justificar el método, ejecutar de nuevo el cálculo con los archivos locales y
 comprobar las cifras antes de presentarlas como resultado definitivo.
 
+## Validación retrospectiva (reproducible)
+
+En el **parquet de ejemplo del repositorio**, al retirar un año completo del solape para calibrar
+con los demás, la mediana del error absoluto anual de MODIS ajustado frente a la unión MODIS+VIIRS
+fue **7,63 % (aproximadamente 8 %)** en **14 años**; el máximo fue **16,54 %**. Esto describe ese
+parquet, no el local de 2 212 061 filas. La unión de sensores no es verdad de campo y la prueba no
+valida por sí sola el periodo anterior a 2012 ni el caso de VIIRS sin MODIS.
+
+**Para el pitch con los datos locales:** ejecutar `python backend/scripts/validacion_retrospectiva.py`
+y sustituir el porcentaje y el número de años por el resultado real. Hasta entonces, **no afirmar
+que el error del conjunto local es 8 %**. Fórmula sugerida, una vez comprobada:
+
+> «En una validación retrospectiva dentro del solape, retiramos cada año de la calibración. La
+> mediana del error absoluto anual fue [resultado local] % en [n] años, frente a la unión satelital;
+> no es una medición de incendios confirmados en campo».
+
 ## Qué hace y qué no hace
 
 PyroChronos está dirigido a **brigadas de bomberos**: muestra estacionalidad y anomalías históricas y
