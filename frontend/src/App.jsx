@@ -218,7 +218,7 @@ export default function App() {
         />
       )}
 
-      <div className="sticky top-14 z-20 border-b border-white/[0.06] bg-ink/75 backdrop-blur-xl">
+      <div className="sticky top-16 z-20 border-b border-white/[0.06] bg-ink/75 backdrop-blur-xl">
         <div className="mx-auto flex max-w-[1500px] items-center justify-between px-4">
           <Tabs items={TABS} value={tab} onChange={setTab} />
           <p className="hidden text-[11px] text-zinc-600 md:block">
