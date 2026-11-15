@@ -79,16 +79,26 @@ def build_bulletin(cfg: Config, ds: Dataset, zone_key: str | None = None, years_
     return text[:MAX_LEN]
 
 
-def send_telegram(text: str, token: str | None = None, chat_id: str | None = None) -> dict:
+def send_telegram(
+    text: str, token: str | None = None, chat_id: str | None = None, parse_mode: str | None = "Markdown"
+) -> dict:
+    """Envia el texto. Si Telegram rechaza el formato, reintenta en texto plano.
+
+    Un mensaje sin negritas sigue siendo util; un mensaje que no llega, no.
+    (Telegram devuelve 400 "can't parse entities" si el Markdown esta mal formado.)
+    """
     token = token or env("TELEGRAM_BOT_TOKEN")
     chat_id = chat_id or env("TELEGRAM_CHAT_ID")
     if not token or not chat_id:
         raise RuntimeError("faltan TELEGRAM_BOT_TOKEN y/o TELEGRAM_CHAT_ID en el entorno")
-    r = requests.post(
-        f"https://api.telegram.org/bot{token}/sendMessage",
-        data={"chat_id": chat_id, "text": text, "parse_mode": "Markdown", "disable_web_page_preview": "true"},
-        timeout=30,
-    )
+    url = f"https://api.telegram.org/bot{token}/sendMessage"
+    data = {"chat_id": chat_id, "text": text, "disable_web_page_preview": "true"}
+    if parse_mode:
+        data["parse_mode"] = parse_mode
+    r = requests.post(url, data=data, timeout=30)
+    if r.status_code == 400 and parse_mode:
+        data.pop("parse_mode", None)
+        r = requests.post(url, data=data, timeout=30)
     if r.status_code != 200:
         raise RuntimeError(f"Telegram respondio {r.status_code}: {r.text[:200]}")
     return r.json()
