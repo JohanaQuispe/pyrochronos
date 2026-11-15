@@ -1,7 +1,6 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-
 :root { color-scheme: dark; }
 html, body, #root { min-height: 100%; }
 html { scroll-behavior: smooth; }
@@ -16,19 +15,13 @@ body {
 button, input, select { font: inherit; }
 :focus-visible { outline: 2px solid #fbbf24; outline-offset: 3px; border-radius: 7px; }
 ::selection { background: rgba(249,115,22,.32); color: #fff; }
-
 @layer components {
-  .card {
-    @apply rounded-2xl border border-white/[0.075] bg-[#10141c]/90;
-    box-shadow: 0 12px 34px -25px rgba(0,0,0,.9), inset 0 1px 0 rgba(255,255,255,.025);
-  }
+  .card { @apply rounded-2xl border border-white/[0.075] bg-[#10141c]/90; box-shadow: 0 12px 34px -25px rgba(0,0,0,.9), inset 0 1px 0 rgba(255,255,255,.025); }
   .card-flat { @apply rounded-2xl border border-white/[0.06] bg-white/[0.018]; }
   .label { @apply text-[10px] font-semibold uppercase tracking-[0.16em] text-zinc-500; }
   .metric { @apply text-[26px] font-semibold leading-none tracking-tight text-white; }
   .hint { @apply text-[11px] leading-snug text-zinc-500; }
-  .btn {
-    @apply inline-flex min-h-9 items-center justify-center gap-1.5 rounded-xl border border-white/10 bg-white/[0.035] px-3 py-2 text-[12px] font-medium text-zinc-200 transition duration-200 hover:border-white/20 hover:bg-white/[0.07] disabled:pointer-events-none disabled:opacity-40;
-  }
+  .btn { @apply inline-flex min-h-9 items-center justify-center gap-1.5 rounded-xl border border-white/10 bg-white/[0.035] px-3 py-2 text-[12px] font-medium text-zinc-200 transition duration-200 hover:border-white/20 hover:bg-white/[0.07] disabled:pointer-events-none disabled:opacity-40; }
   .btn-quiet { @apply inline-flex min-h-9 items-center justify-center gap-1.5 rounded-xl border border-transparent px-3 py-2 text-[12px] font-medium text-zinc-400 transition hover:bg-white/[0.06] hover:text-white; }
   .btn-primary { @apply border-orange-400/30 bg-orange-500/10 text-orange-200 hover:border-orange-400/50 hover:bg-orange-500/15; }
   .chip { @apply inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.025] px-2.5 py-1 text-[10px] font-medium text-zinc-400; }
@@ -46,8 +39,5 @@ button, input, select { font: inherit; }
 ::-webkit-scrollbar { width:10px; height:10px; }
 ::-webkit-scrollbar-thumb { background:#303744; border-radius:8px; }
 ::-webkit-scrollbar-track { background:transparent; }
-@media (max-width: 640px) {
-  .metric { font-size:22px; }
-  .leaflet-control-zoom a { width:34px!important; height:34px!important; line-height:34px!important; }
-}
+@media (max-width: 640px) { .metric { font-size:22px; } .leaflet-control-zoom a { width:34px!important; height:34px!important; line-height:34px!important; } }
 @media (prefers-reduced-motion: reduce) { *,*::before,*::after { scroll-behavior:auto!important; transition:none!important; animation:none!important; } }
