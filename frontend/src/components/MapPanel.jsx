@@ -79,8 +79,22 @@ export default function MapPanel({ bbox, hotspots, meta, onBBoxChange, loading }
     const group = dotsRef.current
     if (!group || !hotspots) return
     group.clearLayers()
-    const renderer = L.canvas({ padding: 0.4 })
-    for (const f of hotspots.features) {
+    // defensa: si el navegador no puede dibujar en canvas, se sigue mostrando el mapa
+    let renderer = null
+    try {
+      renderer = L.canvas({ padding: 0.4 })
+    } catch {
+      renderer = null
+    }
+    try {
+      drawDots(group, hotspots, renderer)
+    } catch (err) {
+      console.warn('No se pudieron dibujar los focos:', err)
+    }
+  }, [hotspots])
+
+  function drawDots(group, features, renderer) {
+    for (const f of features.features) {
       const [lon, lat] = f.geometry.coordinates
       const isViirs = f.properties.source === 'VIIRS'
       L.circleMarker([lat, lon], {
@@ -97,7 +111,7 @@ export default function MapPanel({ bbox, hotspots, meta, onBBoxChange, loading }
         )
         .addTo(group)
     }
-  }, [hotspots])
+  }
 
   useEffect(() => {
     drawRef.current.active = drawing

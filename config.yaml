@@ -11,7 +11,7 @@ geo:
   default_zone: peru
   zones:
     peru:
-      name: Peru
+      name: Perú
       bbox: [-81.5, -18.5, -68.5, 0.5]   # oeste, sur, este, norte
       note: "Zona precargada: archivos anuales por pais publicados por NASA FIRMS."
     madrededios:

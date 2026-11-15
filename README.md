@@ -56,6 +56,7 @@ python backend/scripts/build_dataset.py --raw data/raw
 
 ```bash
 python -m pytest backend/tests -q      # 14 pruebas: normalización, cuadrícula, armonización, anomalías, API
+cd frontend && npm run smoke           # monta la interfaz en jsdom y comprueba que renderiza sin errores
 ```
 
 ### Boletín por Telegram (opcional)

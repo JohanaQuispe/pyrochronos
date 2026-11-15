@@ -7,6 +7,7 @@ import AnomalyChart from './components/AnomalyChart.jsx'
 import MapPanel from './components/MapPanel.jsx'
 import Downloads from './components/Downloads.jsx'
 import HarmonizationPanel from './components/HarmonizationPanel.jsx'
+import BulletinCard from './components/BulletinCard.jsx'
 import { fmt } from './lib/scale'
 
 export default function App() {
@@ -194,12 +195,21 @@ export default function App() {
                 <h2 id="sum-title" className="text-sm font-semibold text-white">
                   En una frase
                 </h2>
+                {data.cards.season && (
+                  <p className="mb-1.5 flex flex-wrap items-center gap-1.5">
+                    <span className="rounded-full border border-fire/50 bg-fire/15 px-2 py-0.5 text-[11px] font-medium text-ember">
+                      Temporada de fuego: {data.cards.season.label}
+                    </span>
+                    <span className="text-[10.5px] text-mist">pico en {data.cards.season.peak_name}</span>
+                  </p>
+                )}
                 <p className="mt-1 text-[12px] leading-relaxed text-slate-200">{data.summary}</p>
                 <p className="mt-2 text-[10.5px] leading-snug text-mist">
                   Este texto se arma con los números calculados por el sistema (plantillas, sin IA generativa).
                 </p>
               </section>
               <Downloads params={{ ...state, bbox: state.zone === 'custom' ? activeBBox.join(',') : undefined }} data={data} />
+              {state.zone !== 'custom' && <BulletinCard zone={state.zone} />}
             </div>
 
             <div className="space-y-3">

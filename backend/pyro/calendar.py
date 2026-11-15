@@ -187,6 +187,34 @@ def build_calendar(
                 item["delta_pct"] = float((last["value"] / hist.median() - 1) * 100)
             cards["last_month"] = item
 
+    # --- temporada de fuego (meses por encima de la mitad del pico) ----------
+    if not months.empty:
+        climatology = months.groupby("period_index")["value"].mean().dropna()
+        if not climatology.empty and climatology.max() > 0:
+            peak = int(climatology.idxmax())
+            hot = {int(m) for m, v in climatology.items() if v >= 0.33 * climatology.max()}
+            best: list[int] = []
+            for start_m in range(1, 13):
+                run: list[int] = []
+                while ((start_m + len(run) - 1) % 12) + 1 in hot and len(run) < 12:
+                    run.append(((start_m + len(run) - 1) % 12) + 1)
+                if len(run) > len(best):
+                    best = run
+            if best:
+                label = (
+                    f"{month_name(best[0])} a {month_name(best[-1])}"
+                    if len(best) > 1
+                    else month_name(best[0])
+                )
+                cards["season"] = {
+                    "months": best,
+                    "label": label,
+                    "peak_month": peak,
+                    "peak_name": month_name(peak),
+                    "share_of_peak": round(float(climatology[best].mean() / climatology.max()), 2),
+                    "criterion": "meses con al menos un tercio de la actividad del mes pico",
+                }
+
     mask_det = ((ds.df["day"] >= (start - date(1970, 1, 1)).days) & (ds.df["day"] <= (end - date(1970, 1, 1)).days)
                 & (ds.df["lat"] >= bbox[1]) & (ds.df["lat"] <= bbox[3])
                 & (ds.df["lon"] >= bbox[0]) & (ds.df["lon"] <= bbox[2]))

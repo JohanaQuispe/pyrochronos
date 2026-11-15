@@ -29,7 +29,14 @@ def build_summary(cards: dict, coverage: dict, calibration: dict, granularity: s
         "detectados por satelite en el rango elegido."
     )
 
-    if cards.get("most_active_month"):
+    if cards.get("season"):
+        season = cards["season"]
+        parts.append(
+            f"La temporada de fuego va de {season['label']}, con el máximo en {season['peak_name']}."
+            if len(season["months"]) > 1
+            else f"La actividad se concentra en {season['label']}."
+        )
+    if cards.get("most_active_month") and not cards.get("season"):
         c = cards["most_active_month"]
         parts.append(f"El mes con mas actividad en toda la serie es {month_name(c['period_index'])}.")
     if cards.get("most_active_year"):

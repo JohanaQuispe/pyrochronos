@@ -1,5 +1,6 @@
 import React from 'react'
 import { api } from '../api'
+import { exportCalendarPng } from '../lib/exportPng'
 import { fmt } from '../lib/scale'
 
 export default function Downloads({ params, data }) {
@@ -34,6 +35,19 @@ export default function Downloads({ params, data }) {
         <a className="btn" href={csvSeries} download>
           ↓ CSV de la serie armonizada
         </a>
+        <button
+          type="button"
+          className="btn"
+          onClick={() => {
+            try {
+              exportCalendarPng(data, `pyrochronos_calendario_${data.meta.zone.replace(/\s+/g, '_')}.png`)
+            } catch (e) {
+              alert(`No se pudo generar la imagen: ${e.message}`)
+            }
+          }}
+        >
+          ↓ Imagen del calendario (PNG)
+        </button>
       </div>
       <p className="mt-2 text-[10.5px] leading-snug text-mist">
         El CSV de focos trae fecha, latitud, longitud, satélite, nivel de confianza, FRP y tipo de fuente. El CSV de la

@@ -47,7 +47,7 @@ export default function TopBar({ meta, state, setState, years, onShortcut }) {
             {zones.map((z) => (
               <option key={z.key} value={z.key}>{z.name}</option>
             ))}
-            <option value="custom">Zona dibujada…</option>
+            {state.zone === 'custom' && <option value="custom">Zona dibujada</option>}
           </select>
         </label>
 

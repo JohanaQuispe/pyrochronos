@@ -22,6 +22,7 @@ from fastapi.staticfiles import StaticFiles
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from pyro.calendar import build_calendar, hotspots_geojson  # noqa: E402
+from pyro.notify import build_bulletin  # noqa: E402
 from pyro.config import ROOT, load_config  # noqa: E402
 from pyro.store import Dataset, load_dataset  # noqa: E402
 from pyro.summary import MONTHS  # noqa: E402
@@ -259,6 +260,21 @@ def csv_series(
     )
 
 
+@app.get("/api/bulletin")
+def bulletin(zone: str | None = None, years_back: int = 3):
+    """Texto listo para pegar en un grupo de guardaparques (Telegram).
+
+    El envio automatico vive en backend/scripts/notify_telegram.py y usa un token
+    que solo existe en el servidor. Esta ruta solo redacta con cifras calculadas.
+    """
+    ds = dataset()
+    key = zone or cfg.default_zone
+    if key not in cfg.zones:
+        raise HTTPException(404, f"zona desconocida: {key}")
+    text = build_bulletin(cfg, ds, key, years_back)
+    return {"zone": cfg.zone_name(key), "text": text, "note": "Historico, no es una alerta en tiempo real."}
+
+
 # --- frontend compilado ------------------------------------------------------
 DIST = ROOT / "backend" / "webapp"
 if DIST.exists():
@@ -270,6 +286,8 @@ if DIST.exists():
 
     @app.get("/{path:path}")
     def spa(path: str):
+        if path.startswith("api/"):
+            raise HTTPException(404, f"ruta de API desconocida: /{path}")
         target = DIST / path
         if target.is_file():
             return FileResponse(target)
