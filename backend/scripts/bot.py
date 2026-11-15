@@ -1,26 +1,24 @@
 #!/usr/bin/env python3
-"""Bot de campo de PyroChronos: geocercas, pines y validación humana.
+"""Bot de campo de PyroChronos: avisos de fuego cerca de ti, en lenguaje llano.
 
-Usa la Bot API de Telegram con `requests` (sin librerías extra). Hace tres cosas:
+Pensado para un bombero o un guardaparque, no para un ingeniero:
 
-  1. /start  -> pide tu ubicación con un botón (geocerca de 10 km por defecto).
-  2. Cuando un foco CRÍTICO (FRP sobre el percentil 95 de su sensor en la zona)
-     cae dentro de tu radio: manda texto con distancia y rumbo, un pin
-     (sendLocation, abre Waze/Google Maps) y tres botones de validación.
-  3. Guarda tu veredicto (fuego real / quema agrícola / falsa alarma).
+  · Se usa con TRES botones, sin escribir comandos.
+  · No habla de "geocercas" ni de "radios": habla de "aquí" y de "a cuántos km".
+  · Cuando un foco intenso cae cerca, manda dónde está, a qué distancia y tres
+    botones para decir qué era.
 
-Lo que NO hace: no detecta incendios, no predice, no sustituye un aviso oficial.
-Los focos salen de `recent.parquet`, que se descarga aparte con
-`download_recent.py`. Si no hay datos recientes, el bot lo dice y no inventa nada.
+Funciona igual en un chat privado y en un grupo: la posición se guarda por
+PERSONA y los avisos se envían al chat donde compartió la ubicación.
 
     python backend/scripts/bot.py --dry-run        # mensaje de ejemplo, sin red
     python backend/scripts/bot.py --send-demo      # manda ese ejemplo (marcado DEMO)
     python backend/scripts/bot.py --poll           # escucha y avisa (bucle)
-    python backend/scripts/bot.py --poll --once    # una pasada y sale
 """
 from __future__ import annotations
 
 import argparse
+import re
 import sys
 import time
 from pathlib import Path
@@ -36,19 +34,26 @@ from pyro.store import Dataset, load_dataset  # noqa: E402
 API = "https://api.telegram.org/bot{token}/{method}"
 POLL_TIMEOUT = 25
 SOURCE_LABELS = {1: "MODIS", 2: "VIIRS", 3: "VIIRS"}
+RADIUS_CHOICES = (5, 10, 20, 50)
+DEFAULT_RADIUS = 10.0
 
 WELCOME = (
-    "*PyroChronos · modo campo*\n"
-    "Te aviso cuando un foco de calor intenso caiga dentro de tu radio.\n\n"
-    "1. Pulsa el botón de abajo y comparte tu ubicación.\n"
-    "2. Cuando llegue un aviso, confirma qué es con los tres botones.\n\n"
-    "_Es una detección satelital, no un aviso oficial: confirma antes de movilizar._"
+    "*PyroChronos*\n"
+    "Te aviso cuando se detecte un fuego cerca de ti, para que puedas confirmarlo antes de salir.\n\n"
+    "1️⃣ Pulsa *📍 Compartir mi ubicación* (una sola vez).\n"
+    "2️⃣ Cuando llegue un aviso, dime qué era con los botones.\n"
+    "3️⃣ Si quieres avisos más lejos o más cerca, pulsa *⚙️ Distancia de aviso*.\n\n"
+    "_Es una detección de satélite, no un aviso oficial._"
 )
 HELP = (
-    "/start — activar el aviso y compartir ubicación\n"
-    "/estado — tu geocerca y cuántos focos vigilo\n"
-    "/radio 15 — cambiar el radio a 15 km\n"
-    "/ayuda — esta ayuda"
+    "*Cómo se usa*\n"
+    "📍 *Compartir mi ubicación* — me dices dónde estás.\n"
+    "⚙️ *Distancia de aviso* — a cuántos km a la redonda te aviso (5, 10, 20 o 50).\n"
+    "ℹ️ *Mi estado* — dónde estás, tu distancia y cuántos fuegos vigilo.\n"
+    "❓ *Ayuda* — este texto.\n\n"
+    "También funcionan los comandos: /distancia 15, /estado, /ayuda.\n\n"
+    "_En un grupo, todos ven la ubicación que compartas; si te importa la privacidad, "
+    "compártela en el chat privado del bot._"
 )
 
 
@@ -86,18 +91,47 @@ class Telegram:
         return self.call("sendLocation", **params)
 
 
-def location_keyboard() -> dict:
+def main_keyboard() -> dict:
+    """Tres botones: lo único que un brigadista necesita con guantes puestos."""
     return {
-        "keyboard": [[{"text": "📍 Compartir mi ubicación", "request_location": True}]],
+        "keyboard": [
+            [{"text": "📍 Compartir mi ubicación", "request_location": True}],
+            [{"text": "⚙️ Distancia de aviso"}, {"text": "ℹ️ Mi estado"}],
+            [{"text": "❓ Ayuda"}],
+        ],
         "resize_keyboard": True,
-        "one_time_keyboard": True,
+        "is_persistent": True,
     }
 
 
-def zone_hotspots(cfg: Config, ds: Dataset, zone: str) -> "object":
-    """Focos históricos de la zona (sirve para el umbral FRP y para el ejemplo)."""
-    import pandas as pd
+def radius_keyboard(current: float | None = None) -> dict:
+    row = [
+        {"text": f"{km} km{' ✓' if current and abs(current - km) < 0.01 else ''}", "callback_data": f"r:{km}"}
+        for km in RADIUS_CHOICES
+    ]
+    return {"inline_keyboard": [row]}
 
+
+def normalize_command(text: str) -> str:
+    """Deja el texto limpio: sin `/comando@bot`, sin caracteres invisibles."""
+    clean = (text or "").replace("\u200b", "").replace("\u2060", "").strip()
+    return re.sub(r"^(/\w+)@\w+", r"\1", clean)
+
+
+def parse_radius(text: str) -> float | None:
+    """Acepta «15», «15 km», «15km», «/distancia 15», «/radio@bot 15»."""
+    match = re.search(r"(\d+(?:[.,]\d+)?)\s*(?:km|kms)?", normalize_command(text))
+    if not match:
+        return None
+    try:
+        value = float(match.group(1).replace(",", "."))
+    except ValueError:
+        return None
+    return value if 1 <= value <= 100 else None
+
+
+def zone_hotspots(cfg: Config, ds: Dataset, zone: str):
+    """Focos históricos de la zona (sirven para el umbral de intensidad)."""
     w, s, e, n = cfg.zone_bbox(zone)
     df = ds.df
     mask = (df["lat"] >= s) & (df["lat"] <= n) & (df["lon"] >= w) & (df["lon"] <= e)
@@ -122,9 +156,142 @@ def sample_alert(cfg: Config, ds: Dataset, zone: str) -> tuple[dict, list]:
     return row, critical.head(3).to_dict("records")
 
 
+def register_location(cfg: Config, tg: Telegram, msg: dict) -> None:
+    """Guarda dónde está la persona y le confirma en lenguaje llano."""
+    loc = msg["location"]
+    chat = msg.get("chat", {})
+    chat_id = chat.get("id")
+    user_id = (msg.get("from") or {}).get("id", chat_id)
+    previous = groundtruth.load_geofences(cfg).get(str(user_id), {})
+    radius = float(previous.get("radius_km", DEFAULT_RADIUS))
+    rec = groundtruth.save_geofence(
+        cfg, user_id, loc["latitude"], loc["longitude"], radius,
+        name=(msg.get("from") or {}).get("first_name"),
+        chat_id=chat_id,
+    )
+    is_group = chat.get("type") in ("group", "supergroup")
+    text = (
+        f"✅ *Listo*\nTe aviso si se detecta un fuego a menos de *{rec['radius_km']:.0f} km* de aquí.\n\n"
+        "Toca *⚙️ Distancia de aviso* para cambiarlo."
+    )
+    if is_group:
+        text += "\n\n_En este grupo todos ven la ubicación que compartiste._"
+    tg.text(chat_id, text, main_keyboard())
+
+
+def show_state(cfg: Config, tg: Telegram, chat_id, user_id) -> None:
+    fences = groundtruth.load_geofences(cfg)
+    mine = fences.get(str(user_id))
+    recent, _ = nrt.load_recent(cfg)
+    summary = groundtruth.verdict_summary(cfg)
+    lines = ["*Tu estado*"]
+    if mine:
+        lines.append(f"📍 Estás en: {mine['lat']:.4f}, {mine['lon']:.4f}")
+        lines.append(f"📏 Te aviso hasta *{mine['radius_km']:.0f} km* a la redonda")
+    else:
+        lines.append("📍 Todavía no sé dónde estás: pulsa *Compartir mi ubicación*.")
+    if recent is None:
+        lines.append("🔥 Fuegos recientes: *sin datos cargados ahora mismo*")
+    else:
+        lines.append(f"🔥 Fuegos recientes cargados: {len(recent)}")
+        if mine:
+            marked = geofence.mark_critical(recent)
+            near = geofence.nearest(marked, mine["lat"], mine["lon"], mine["radius_km"], limit=50)
+            lines.append(f"🚨 Focos que te avisaría ahora: *{len(near)}*")
+    lines.append(f"✅ Confirmaciones que hiciste: {summary['total']}")
+    for code, count in summary["counts"].items():
+        if count:
+            lines.append(f"   {geofence.VERDICTS[code]}: {count}")
+    tg.text(chat_id, "\n".join(lines), main_keyboard())
+
+
+def handle_message(cfg: Config, tg: Telegram, msg: dict, dataset: Dataset, zone: str) -> None:
+    chat = msg.get("chat", {})
+    chat_id = chat.get("id")
+    user_id = (msg.get("from") or {}).get("id", chat_id)
+    raw = msg.get("text") or ""
+    text = normalize_command(raw).lower()
+
+    if "location" in msg:
+        register_location(cfg, tg, msg)
+        return
+
+    # Botones y sinónimos, en lenguaje llano
+    if text.startswith("/start") or text.startswith("/empezar") or "ubicaci" in text:
+        tg.text(chat_id, WELCOME, main_keyboard())
+        return
+    if text.startswith("/ayuda") or "ayuda" in text:
+        tg.text(chat_id, HELP, main_keyboard())
+        return
+    if "distancia" in text or text.startswith("/radio") or text.startswith("/distancia"):
+        current = groundtruth.load_geofences(cfg).get(str(user_id), {}).get("radius_km")
+        value = parse_radius(text)
+        if value is None:
+            tg.text(
+                chat_id,
+                f"¿A cuántos km a la redonda quieres los avisos?\n"
+                f"Elige un botón (ahora: *{current:.0f} km*)." if current else
+                "¿A cuántos km a la redonda quieres los avisos? Elige un botón:",
+                radius_keyboard(current),
+            )
+            return
+        rec = groundtruth.set_radius(cfg, user_id, value) or {}
+        if rec.get("lat") is None:
+            tg.text(chat_id, f"Guardado: *{value:.0f} km*. Ahora pulsa *📍 Compartir mi ubicación* "
+                             "y empiezo a avisarte.", main_keyboard())
+        else:
+            tg.text(chat_id, f"Listo: te aviso hasta *{value:.0f} km* a la redonda.", main_keyboard())
+        return
+    if text.startswith("/estado") or "estado" in text:
+        show_state(cfg, tg, chat_id, user_id)
+        return
+    tg.text(chat_id, "No entendí. Usa los botones de abajo 👇", main_keyboard())
+
+
+def handle_callback(cfg: Config, tg: Telegram, cb: dict) -> None:
+    data = str(cb.get("data") or "")
+    user_id = (cb.get("from") or {}).get("id")
+    chat_id = (cb.get("message") or {}).get("chat", {}).get("id")
+
+    # Cambio de distancia desde los botones
+    if data.startswith("r:"):
+        try:
+            value = float(data.split(":", 1)[1])
+        except ValueError:
+            tg.call("answerCallbackQuery", callback_query_id=cb["id"], text="Opción no válida.")
+            return
+        rec = groundtruth.set_radius(cfg, user_id, value) or {}
+        if rec.get("lat") is None:
+            tg.call("answerCallbackQuery", callback_query_id=cb["id"], text=f"Guardado: {value:.0f} km")
+            if chat_id:
+                tg.text(chat_id, f"Guardado: *{value:.0f} km*. Ahora pulsa *📍 Compartir mi ubicación*.",
+                        main_keyboard())
+            return
+        tg.call("answerCallbackQuery", callback_query_id=cb["id"], text=f"Guardado: {value:.0f} km")
+        if chat_id:
+            tg.text(chat_id, f"Listo: te aviso hasta *{value:.0f} km* a la redonda.", main_keyboard())
+        return
+
+    parsed = geofence.parse_callback(data)
+    if not parsed:
+        tg.call("answerCallbackQuery", callback_query_id=cb["id"], text="No entendí esa opción.")
+        return
+    hotspot_id, verdict = parsed
+    try:
+        groundtruth.save_verdict(cfg, hotspot_id, user_id, verdict)
+    except ValueError as exc:
+        tg.call("answerCallbackQuery", callback_query_id=cb["id"], text=str(exc)[:200], show_alert=True)
+        return
+    label = geofence.VERDICTS[verdict]
+    tg.call("answerCallbackQuery", callback_query_id=cb["id"], text=f"Registrado: {label}")
+    if chat_id:
+        summary = groundtruth.verdict_summary(cfg)
+        tg.text(chat_id, f"✅ Guardado: *{label}*\nConfirmaciones en el equipo: {summary['total']}")
+
+
 def check_alerts(cfg: Config, tg: Telegram, zone: str, dataset: Dataset) -> int:
-    """Revisa focos recientes y avisa a cada geocerca. Devuelve cuántos envió."""
-    recent, meta = nrt.load_recent(cfg)
+    """Revisa focos recientes y avisa a cada persona según su distancia."""
+    recent, _meta = nrt.load_recent(cfg)
     if recent is None or recent.empty:
         return 0
     w, s, e, n = cfg.zone_bbox(zone)
@@ -132,115 +299,38 @@ def check_alerts(cfg: Config, tg: Telegram, zone: str, dataset: Dataset) -> int:
     if inside.empty:
         return 0
     hist = zone_hotspots(cfg, dataset, zone)
-    marked = geofence.mark_critical(inside, history=hist)
-    marked = marked.reset_index(drop=True)
+    marked = geofence.mark_critical(inside, history=hist).reset_index(drop=True)
     marked["hotspot_id"] = [
         f"nrt-{int(r.day)}-{r.lat:.3f}-{r.lon:.3f}-{int(r.source)}" for r in marked.itertuples()
     ]
     sent = 0
     for fence in groundtruth.active_geofences(cfg):
-        hits = geofence.nearest(marked, fence["lat"], fence["lon"], fence.get("radius_km", 10.0))
+        if not fence.get("lat"):
+            continue
+        target = str(fence.get("chat_id") or fence["telegram_id"])
+        hits = geofence.nearest(marked, fence["lat"], fence["lon"], fence.get("radius_km", DEFAULT_RADIUS))
         for _, hit in hits.iterrows():
             hit = hit.to_dict()
-            if groundtruth.already_sent(cfg, fence["telegram_id"], hit["hotspot_id"]):
+            if groundtruth.already_sent(cfg, target, hit["hotspot_id"]):
                 continue
-            text = geofence.alert_text(hit, fence.get("radius_km", 10.0), zone=cfg.zone_name(zone))
-            kb = geofence.inline_keyboard(hit["hotspot_id"])
-            tg.text(fence["telegram_id"], text, kb)
+            tg.text(target, geofence.alert_text(hit, fence.get("radius_km", DEFAULT_RADIUS), zone=cfg.zone_name(zone)),
+                    geofence.inline_keyboard(hit["hotspot_id"]))
             try:
-                tg.location(fence["telegram_id"], float(hit["lat"]), float(hit["lon"]))
+                tg.location(target, float(hit["lat"]), float(hit["lon"]))
             except RuntimeError:
                 pass  # el pin es un extra: si falla, el texto ya llegó
-            groundtruth.mark_sent(cfg, fence["telegram_id"], hit["hotspot_id"])
+            groundtruth.mark_sent(cfg, target, hit["hotspot_id"])
             sent += 1
     return sent
-
-
-def handle_message(cfg: Config, tg: Telegram, msg: dict, dataset: Dataset, zone: str) -> None:
-    chat_id = msg["chat"]["id"]
-    text = (msg.get("text") or "").strip()
-    if "location" in msg:
-        loc = msg["location"]
-        rec = groundtruth.save_geofence(cfg, chat_id, loc["latitude"], loc["longitude"], 10.0)
-        tg.text(
-            chat_id,
-            f"✅ *Geocerca activada*\nRadio: {rec['radius_km']:.0f} km\n"
-            f"Centro: {rec['lat']:.4f}, {rec['lon']:.4f}\n\n"
-            "Te aviso cuando un foco crítico caiga dentro. Puedes cambiarlo con /radio 15.",
-            {"remove_keyboard": True},
-        )
-        return
-    if text.startswith("/start"):
-        tg.text(chat_id, WELCOME, location_keyboard())
-        return
-    if text.startswith("/ayuda"):
-        tg.text(chat_id, HELP)
-        return
-    if text.startswith("/radio"):
-        parts = text.split()
-        try:
-            new_radius = float(parts[1].replace(",", "."))
-            if not 1 <= new_radius <= 100:
-                raise ValueError
-        except (IndexError, ValueError):
-            tg.text(chat_id, "Uso: /radio 15  (entre 1 y 100 km)")
-            return
-        fences = groundtruth.load_geofences(cfg)
-        current = fences.get(str(chat_id))
-        if not current:
-            tg.text(chat_id, "Primero comparte tu ubicación con /start.")
-            return
-        groundtruth.save_geofence(cfg, chat_id, current["lat"], current["lon"], new_radius)
-        tg.text(chat_id, f"Radio actualizado a {new_radius:.0f} km.")
-        return
-    if text.startswith("/estado"):
-        fences = groundtruth.load_geofences(cfg)
-        mine = fences.get(str(chat_id))
-        recent, meta = nrt.load_recent(cfg)
-        n_recent = 0 if recent is None else int(len(recent))
-        summary = groundtruth.verdict_summary(cfg)
-        lines = ["*Tu estado*"]
-        if mine:
-            lines.append(f"Geocerca: {mine['radius_km']:.0f} km en {mine['lat']:.4f}, {mine['lon']:.4f}")
-        else:
-            lines.append("Sin geocerca todavía: usa /start y comparte tu ubicación.")
-        lines.append(f"Focos recientes cargados: {n_recent}")
-        if recent is None:
-            lines.append("_No hay datos recientes: ejecuta download_recent.py en el servidor._")
-        lines.append(f"Validaciones en campo: {summary['total']}")
-        for code, count in summary["counts"].items():
-            lines.append(f"  · {geofence.VERDICTS[code]}: {count}")
-        tg.text(chat_id, "\n".join(lines))
-        return
-    tg.text(chat_id, "No entiendo ese mensaje.\n\n" + HELP, location_keyboard())
-
-
-def handle_callback(cfg: Config, tg: Telegram, cb: dict) -> None:
-    parsed = geofence.parse_callback(cb.get("data", ""))
-    if not parsed:
-        tg.call("answerCallbackQuery", callback_query_id=cb["id"], text="No entendí esa opción.")
-        return
-    hotspot_id, verdict = parsed
-    try:
-        groundtruth.save_verdict(cfg, hotspot_id, cb["from"]["id"], verdict)
-    except ValueError as exc:
-        tg.call("answerCallbackQuery", callback_query_id=cb["id"], text=str(exc)[:200], show_alert=True)
-        return
-    label = geofence.VERDICTS[verdict]
-    tg.call("answerCallbackQuery", callback_query_id=cb["id"], text=f"Registrado: {label}")
-    chat_id = cb.get("message", {}).get("chat", {}).get("id")
-    if chat_id:
-        summary = groundtruth.verdict_summary(cfg)
-        tg.text(chat_id, f"✅ Guardado: *{label}*\nValidaciones en este equipo: {summary['total']}")
 
 
 def poll(cfg: Config, tg: Telegram, dataset: Dataset, zone: str, interval: int, once: bool) -> int:
     try:
         tg.call("setMyCommands", commands=[
-            {"command": "start", "description": "Activar aviso y compartir ubicación"},
-            {"command": "estado", "description": "Mi geocerca y focos vigilados"},
-            {"command": "radio", "description": "Cambiar el radio (ej. /radio 15)"},
-            {"command": "ayuda", "description": "Qué puedo hacer"},
+            {"command": "start", "description": "Empezar y compartir mi ubicación"},
+            {"command": "distancia", "description": "A cuántos km me avisas (ej. /distancia 15)"},
+            {"command": "estado", "description": "Dónde estoy y qué vigilo"},
+            {"command": "ayuda", "description": "Cómo se usa"},
         ])
     except RuntimeError as exc:
         print(f"aviso: no pude registrar los comandos ({exc})", file=sys.stderr)
@@ -279,11 +369,11 @@ def poll(cfg: Config, tg: Telegram, dataset: Dataset, zone: str, interval: int, 
 
 
 def main(argv: list[str] | None = None) -> int:
-    ap = argparse.ArgumentParser(description="Bot de campo de PyroChronos (geocercas y validación).")
+    ap = argparse.ArgumentParser(description="Bot de campo de PyroChronos (avisos de fuego cerca de ti).")
     ap.add_argument("--zone", default=None, help="zona de config.yaml (por defecto la principal)")
     ap.add_argument("--dry-run", action="store_true", help="imprime el aviso de ejemplo sin enviar nada")
     ap.add_argument("--send-demo", action="store_true", help="envía el ejemplo marcado como DEMO")
-    ap.add_argument("--poll", action="store_true", help="escucha mensajes y avisa (por defecto si no hay otra acción)")
+    ap.add_argument("--poll", action="store_true", help="escucha mensajes y avisa")
     ap.add_argument("--once", action="store_true", help="una sola pasada y sale")
     ap.add_argument("--interval", type=int, default=300, help="segundos entre revisiones de focos")
     args = ap.parse_args(argv)
@@ -295,10 +385,9 @@ def main(argv: list[str] | None = None) -> int:
     if args.dry_run:
         row, top = sample_alert(cfg, ds, zone)
         print("=== Aviso de ejemplo (foco histórico, no de hoy) ===")
-        print(geofence.alert_text(row, 10.0, zone=cfg.zone_name(zone)))
+        print(geofence.alert_text(row, DEFAULT_RADIUS, zone=cfg.zone_name(zone)))
         print("\nBotones:", [b[0]["text"] for b in geofence.inline_keyboard(row["hotspot_id"])["inline_keyboard"]])
-        print(f"\nUmbral FRP p95 en {cfg.zone_name(zone)}: {row['frp_p95']:.0f} MW · FRP del ejemplo: {float(row['frp']):.0f} MW")
-        print(f"Otros focos críticos recientes-últimos en la zona: {len(top)}")
+        print(f"\nUmbral de intensidad en {cfg.zone_name(zone)}: {row['frp_p95']:.0f} MW · ejemplo: {float(row['frp']):.0f} MW")
         return 0
 
     token = env("TELEGRAM_BOT_TOKEN")
@@ -315,7 +404,7 @@ def main(argv: list[str] | None = None) -> int:
         row, _ = sample_alert(cfg, ds, zone)
         banner = ("*DEMO* — este aviso usa un foco histórico de la zona "
                   f"({row['day_label']}), no una detección de hoy.\n\n")
-        tg.text(chat_id, banner + geofence.alert_text(row, 10.0, zone=cfg.zone_name(zone)),
+        tg.text(chat_id, banner + geofence.alert_text(row, DEFAULT_RADIUS, zone=cfg.zone_name(zone)),
                 geofence.inline_keyboard(row["hotspot_id"]))
         tg.location(chat_id, float(row["lat"]), float(row["lon"]))
         print("Demo enviada. Pulsa un botón en Telegram y luego --poll --once para verlo guardado.")

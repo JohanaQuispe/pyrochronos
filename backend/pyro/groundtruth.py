@@ -57,21 +57,51 @@ def save_geofence(
     radius_km: float = 10.0,
     name: str | None = None,
     role: str | None = None,
+    chat_id: int | str | None = None,
 ) -> dict:
-    """Registra o actualiza la posicion de un usuario de campo."""
+    """Guarda dónde está una persona y con qué distancia quiere los avisos.
+
+    La clave es la PERSONA (telegram_id), no el chat: en un grupo de 20 bomberos
+    cada uno tiene su posición. `chat_id` es dónde se le avisa (el grupo o su
+    chat privado), para no mezclar quién está dónde con dónde se responde.
+    """
     data = load_geofences(cfg)
+    key = str(telegram_id)
+    previous = data.get(key, {})
     record = {
-        "telegram_id": str(telegram_id),
+        "telegram_id": key,
+        "chat_id": str(chat_id) if chat_id is not None else previous.get("chat_id", key),
         "lat": float(lat),
         "lon": float(lon),
         "radius_km": float(radius_km),
-        "name": name or data.get(str(telegram_id), {}).get("name"),
-        "role": role or data.get(str(telegram_id), {}).get("role"),
+        "name": name or previous.get("name"),
+        "role": role or previous.get("role"),
         "updated_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
     }
-    data[str(telegram_id)] = record
+    data[key] = record
     _write(_path(cfg, GEOFENCES_FILE), data)
     return record
+
+
+def set_radius(cfg: Config, telegram_id: int | str, radius_km: float) -> dict | None:
+    """Cambia la distancia de aviso aunque todavía no haya ubicación guardada."""
+    data = load_geofences(cfg)
+    key = str(telegram_id)
+    if key not in data:
+        # todavía no compartió ubicación: se guarda solo la preferencia
+        data[key] = {
+            "telegram_id": key,
+            "lat": None,
+            "lon": None,
+            "radius_km": float(radius_km),
+            "updated_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+        }
+        _write(_path(cfg, GEOFENCES_FILE), data)
+        return data[key]
+    data[key]["radius_km"] = float(radius_km)
+    data[key]["updated_at"] = datetime.now(timezone.utc).isoformat(timespec="seconds")
+    _write(_path(cfg, GEOFENCES_FILE), data)
+    return data[key]
 
 
 def active_geofences(cfg: Config) -> list[dict]:
