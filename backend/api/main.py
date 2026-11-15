@@ -10,6 +10,7 @@ import sys
 from datetime import date
 from functools import lru_cache
 from pathlib import Path
+from threading import RLock
 from typing import Literal
 
 import numpy as np
@@ -25,7 +26,7 @@ from pyro.calendar import build_calendar, hotspots_geojson  # noqa: E402
 from pyro.notify import build_bulletin  # noqa: E402
 from pyro.alerts import build_alert  # noqa: E402
 from pyro.report import build_report_html  # noqa: E402
-from pyro import nrt  # noqa: E402
+from pyro import departments, nrt  # noqa: E402
 from pyro.config import ROOT, env, load_config  # noqa: E402
 from pyro.store import Dataset, load_dataset  # noqa: E402
 from pyro.summary import MONTHS  # noqa: E402
@@ -35,13 +36,46 @@ app = FastAPI(title=f"{cfg.name} API", version=cfg.version, docs_url="/api/docs"
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["GET"], allow_headers=["*"])
 
 _dataset: Dataset | None = None
+_dataset_lock = RLock()
 
 
 def dataset() -> Dataset:
     global _dataset
     if _dataset is None:
-        _dataset = load_dataset(cfg)
+        with _dataset_lock:
+            if _dataset is None:
+                _dataset = load_dataset(cfg)
     return _dataset
+
+
+_department_lock = RLock()
+
+
+@lru_cache(maxsize=2)
+def _department_dataset(key: str, dataset_id: int) -> Dataset:
+    parent = dataset()
+    sub = departments.filter_frame(parent.df, key)
+    if sub.empty:
+        raise HTTPException(404, "No hay detecciones históricas en este departamento.")
+    out = Dataset(df=sub, generated_at=parent.generated_at, source_version=parent.source_version,
+                  cell_deg=parent.cell_deg)
+    # Construir una sola vez bajo el candado evita copias concurrentes grandes.
+    _ = out.cells
+    return out
+
+
+def dataset_for_zone(zone: str | None, bbox: str | None) -> Dataset:
+    parent = dataset()
+    if not bbox and zone in departments.all_departments():
+        with _department_lock:
+            return _department_dataset(zone, id(parent))
+    return parent
+
+
+def department_selector(zone: str | None, bbox: str | None):
+    if not bbox and zone in departments.all_departments():
+        return lambda df: departments.filter_frame(df, zone)
+    return None
 
 
 # --- validacion de parametros ------------------------------------------------
@@ -62,6 +96,9 @@ def resolve_zone(zone: str | None, bbox: str | None) -> tuple[tuple[float, float
             )
         return (w, s, e, n), f"Zona dibujada ({w:.2f}, {s:.2f}) - ({e:.2f}, {n:.2f})"
     key = zone or cfg.default_zone
+    dept = departments.all_departments().get(key)
+    if dept:
+        return tuple(dept['bbox']), dept['name']
     if key not in cfg.zones:
         raise HTTPException(404, f"zona desconocida: {key}")
     return cfg.zone_bbox(key), cfg.zone_name(key)
@@ -77,15 +114,24 @@ def parse_date(value: str | None, default: date) -> date:
 
 
 @lru_cache(maxsize=128)
-def _calendar_cached(bb, zone_name, start, end, granularity, measure, sources, year):
+def _calendar_cached(bb, zone_name, start, end, granularity, measure, sources, year, zone=None, bbox=None):
     return build_calendar(
-        cfg, dataset(), bb, start, end,
+        cfg, dataset_for_zone(zone, bbox), bb, start, end,
         granularity=granularity, measure=measure, sources=sources,
         zone_name=zone_name, selected_year=year,
     )
 
 
 # --- endpoints ---------------------------------------------------------------
+@app.get("/api/departments/{key}")
+def department_geometry(key: str):
+    dept = departments.all_departments().get(key)
+    if not dept:
+        raise HTTPException(404, "departamento desconocido")
+    return {"type": "Feature", "geometry": dept['geometry'],
+            "properties": {"name": dept['name'], "note": dept['note']}}
+
+
 @app.get("/api/health")
 def health():
     ds = dataset()
@@ -103,7 +149,7 @@ def meta():
         "zones": [
             {"key": k, "name": v["name"], "bbox": v["bbox"], "note": v.get("note", "")}
             for k, v in cfg.zones.items()
-        ],
+        ] + [{k: v for k, v in d.items() if k != 'geometry'} for d in departments.all_departments().values()],
         "default_zone": cfg.default_zone,
         "coverage": cov,
         "measures": [{"key": m, "label": "celdas-día con fuego" if m == "cell_days" else "focos detectados"}
@@ -140,7 +186,7 @@ def calendar(
         e = ds.end
     if s > e:
         raise HTTPException(400, "el rango de fechas queda fuera de los datos disponibles")
-    payload = _calendar_cached(bb, name, s, e, granularity, measure or cfg.default_measure, sources, year)
+    payload = _calendar_cached(bb, name, s, e, granularity, measure or cfg.default_measure, sources, year, zone, bbox)
     return payload
 
 
@@ -161,7 +207,7 @@ def hotspots(
     cap = int(limit) if int(limit) > 0 else int(cfg.api["max_hotspots_geojson"])
     if cap > 100000:
         raise HTTPException(400, "limit maximo 100000")
-    return hotspots_geojson(ds, bb, s, e, sources, cap, conf_min)
+    return hotspots_geojson(dataset_for_zone(zone, bbox), bb, s, e, sources, cap, conf_min)
 
 
 @app.get("/api/recent/hotspots")
@@ -174,16 +220,20 @@ def recent_hotspots(
     """Focos NRT guardados localmente; nunca implica una descarga en vivo."""
     bb, _ = resolve_zone(zone, bbox)
     df, info = nrt.load_recent(cfg)
+    selector = department_selector(zone, bbox)
+    if df is not None and selector:
+        df = selector(df)
     if df is None or df.empty:
         return {"type": "FeatureCollection", "features": [],
                 "meta": {"available": df is not None, "total": 0, "shown": 0,
                          "sampled": False, "fetched_at": info.get("fetched_at"),
-                         "first_day": info.get("first_day"), "last_day": info.get("last_day")}}
+                         "first_day": info.get("first_day"), "last_day": info.get("last_day"), "bbox": info.get("bbox")}}
     ds = Dataset(df=df, generated_at="", source_version="nrt")
     payload = hotspots_geojson(ds, bb, ds.start, ds.end, sources,
                                int(cfg.api["max_hotspots_geojson"]), conf_min)
     payload["meta"].update({"available": True, "fetched_at": info.get("fetched_at"),
-                            "first_day": info.get("first_day"), "last_day": info.get("last_day")})
+                            "first_day": info.get("first_day"), "last_day": info.get("last_day"),
+                            "bbox": info.get("bbox")})
     return payload
 
 
@@ -212,7 +262,7 @@ def csv_hotspots(
     bb, name = resolve_zone(zone, bbox)
     s = parse_date(start, ds.start)
     e = parse_date(end, ds.end)
-    sub = _filter(ds.df, bb, s, e, sources).copy()
+    sub = _filter(dataset_for_zone(zone, bbox).df, bb, s, e, sources).copy()
     if sub.empty:
         raise HTTPException(404, "no hay focos en esa zona y ese rango")
 
@@ -295,23 +345,24 @@ def alert(zone: str | None = None, bbox: str | None = None, date_ref: str | None
     ref = parse_date(date_ref, None) if date_ref else None
     if weeks < 1 or weeks > 12:
         raise HTTPException(400, "weeks debe estar entre 1 y 12")
-    out = _alert_cached(bb, name, ref.isoformat() if ref else None, int(weeks))
+    out = _alert_cached(bb, name, ref.isoformat() if ref else None, int(weeks), zone, bbox)
     return out
 
 
-def _alert_cached(bb, zone_name, ref_iso, weeks):
+def _alert_cached(bb, zone_name, ref_iso, weeks, zone=None, bbox=None):
     from datetime import date as _date
 
-    return build_alert(cfg, dataset(), bb, zone_name,
+    return build_alert(cfg, dataset_for_zone(zone, bbox), bb, zone_name,
                        reference_date=_date.fromisoformat(ref_iso) if ref_iso else None,
-                       lookahead_weeks=weeks)
+                       lookahead_weeks=weeks, recent_selector=department_selector(zone, bbox))
 
 
 @app.get("/api/recent")
 def recent(zone: str | None = None, bbox: str | None = None):
     """Estado de los datos recientes (NRT) cargados. Si no hay, se dice claramente."""
     bb, _ = resolve_zone(zone, bbox)
-    return nrt.stats(cfg, bb)
+    selector = department_selector(zone, bbox)
+    return nrt.stats(cfg, bb, selector=selector) if selector else nrt.stats(cfg, bb)
 
 
 @app.get("/api/report")
@@ -327,7 +378,8 @@ def report(zone: str | None = None, bbox: str | None = None, start: str | None =
         e = ds.end
     if s > e:
         raise HTTPException(400, "rango de fechas invalido")
-    html = build_report_html(cfg, ds, bb, name, s, e)
+    html = build_report_html(cfg, dataset_for_zone(zone, bbox), bb, name, s, e,
+                             recent_selector=department_selector(zone, bbox))
     return HTMLResponse(html)
 
 
@@ -358,6 +410,8 @@ def climate_context(zone: str | None = None, date_ref: str | None = None):
     existe, responde `available: false` con las instrucciones: no se inventa nada.
     """
     key = zone or cfg.default_zone
+    if key in departments.all_departments():
+        return {"available": False, "reason": "No hay datos climáticos precargados para este departamento."}
     if key not in cfg.zones:
         raise HTTPException(404, f"zona desconocida: {key}")
     ref = parse_date(date_ref, None) if date_ref else None
@@ -367,7 +421,23 @@ def climate_context(zone: str | None = None, date_ref: str | None = None):
 # --- capa de campo (geocercas, validacion humana) ----------------------------
 from pydantic import BaseModel, Field  # noqa: E402
 
-from pyro import geofence, groundtruth  # noqa: E402
+from pyro import assistant, geofence, groundtruth  # noqa: E402
+
+
+class AssistantQuestion(BaseModel):
+    question: str = Field(min_length=1, max_length=500)
+    zone: str | None = None
+    bbox: str | None = None
+
+
+@app.post("/api/assistant")
+def ask_assistant(body: AssistantQuestion):
+    if not body.question.strip():
+        raise HTTPException(400, "Escribe una pregunta")
+    bb, name = resolve_zone(body.zone, body.bbox)
+    return {"answer": assistant.answer_question(body.question, cfg, dataset_for_zone(body.zone, body.bbox), bb, name,
+                                                 recent_selector=department_selector(body.zone, body.bbox)),
+            "type": "respuestas_acotadas"}
 
 
 @app.get("/api/historical-grid")

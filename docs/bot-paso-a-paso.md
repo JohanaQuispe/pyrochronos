@@ -261,3 +261,27 @@ python backend/scripts/download_power.py --zone madrededios --years 5
 > confirmarse en campo, no una orden de despacho."
 
 El envío y el pin deben verificarse con datos recientes y Telegram; la app no consulta FIRMS en vivo.
+
+## Consultas y vigilancia periódica (Windows)
+
+En la app, en **Monitoreo**, usa «Pregúntale a PyroChronos». Ese cuadro responde desde el servidor
+local con reglas compartidas con el bot, **no** es una conversación incrustada de Telegram ni una IA
+que responda cualquier cosa. Prueba «¿Hay focos recientes?» o «¿Cómo recibo avisos?». La zona de la
+app es la seleccionada arriba; la zona de Telegram es la elegida al iniciar el bot.
+
+Para activar la actualización periódica del bot, en otra ventana de PowerShell, desde la carpeta del
+proyecto y con las claves ya configuradas en `.env`:
+
+```powershell
+python backend\scripts\bot.py --poll --auto-refresh --zone peru
+```
+
+En Telegram abre el bot, pulsa `/start`, comparte tu ubicación y elige la distancia. El proceso
+consulta FIRMS cada 15 minutos mientras la ventana y la conexión sigan funcionando. **No muestra ni
+necesita que pegues las claves en el chat.** Si falla una fuente, no considera esa descarga completa
+ni manda alertas en ese ciclo. Solo avisa focos que cumplen el umbral de FRP y caen dentro del radio;
+no avisa todos los incendios. Las detecciones pueden llegar con retraso y requieren confirmación.
+
+Antes de usarlo, probar en el teléfono el envío de un ejemplo (`--send-demo`) y después la vigilancia
+con datos recientes reales. No presentar la recepción de avisos automáticos como verificada hasta
+comprobarla. El servidor de la app y el bot deben seguir abiertos; no garantizan vigilancia 24/7.

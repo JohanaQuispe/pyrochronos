@@ -1,7 +1,7 @@
 # Metodología de armonización
 
-Objetivo: que **el sensor de origen deje de importar**. Después de armonizar, un valor de 2005 y
-otro de 2024 significan lo mismo, con su incertidumbre declarada.
+Objetivo: reducir las diferencias entre sensores para facilitar la comparación histórica, sin
+suponer que son equivalentes. Las estimaciones tienen incertidumbre y limitaciones declaradas.
 
 ## 1. Normalización (esquema común)
 
@@ -21,8 +21,9 @@ La confianza se unifica así: MODIS numérica → baja si < 30, nominal entre 30
 VIIRS por categorías → `l` baja, `n` nominal, `h` alta. Por defecto se descartan las de confianza
 baja y, opcionalmente, los tipos de fuente fija (`quality.exclude_types` en `config.yaml`).
 
-Con los archivos de Perú (2000–2025) quedan **1 323 016 detecciones** tras el control de calidad:
-336 778 de MODIS y 986 238 de VIIRS.
+El parquet de ejemplo incluido en el repositorio contiene **1 323 016 detecciones**: 336 778
+MODIS y 986 238 VIIRS. El parquet local de la participante es distinto: **2 212 061 detecciones**;
+los resultados y la validación deben calcularse con el archivo que se va a presentar.
 
 ## 2. Cuadrícula y medida principal
 
@@ -36,8 +37,9 @@ cuenta como máximo una vez por día y por satélite.
 - *Segunda medida*: **focos detectados** (detecciones sueltas). Se muestra siempre como referencia
   y sirve para explicar la diferencia, nunca como la serie armonizada.
 
-Cada periodo (mes o semana ISO) suma las celdas-día. Fuera del periodo de un satélite el valor es
-**sin dato**, nunca cero; y donde hay cobertura y no hubo focos, el valor es cero real.
+Cada periodo (mes o semana ISO) suma las celdas-día. Fuera de las fechas extremas del conjunto
+se marca sin dato; dentro de ellas, periodos sin detecciones se muestran como cero. Las detecciones
+por sí solas no demuestran cobertura efectiva de los satélites durante todo el periodo.
 
 ## 3. Calibración (solo en los años de solape)
 
@@ -55,17 +57,15 @@ incertidumbre(p) = [percentil 25, percentil 75] del cociente
 Si un periodo no tiene suficientes años de solape, se usa el factor global y el valor se marca
 como *factor de reserva* (menos fiable).
 
-**Valores de referencia con los datos de Perú:**
+**Valores de referencia del parquet de ejemplo del repositorio**, no del parquet local:
 
 | granularidad | factor global | p25 – p75 | concordancia (r) | periodos de solape |
 |---|---|---|---|---|
 | mensual | 5,83 | 4,91 – 6,52 | 0,979 | 168 |
 | semanal | 5,70 | 4,73 – 7,15 | 0,961 | 728 |
 
-El factor es mayor en los meses de lluvia (feb–mar ≈ 7) y menor en el pico de la temporada
-(sep ≈ 4,1): cuando hay muchos incendios grandes, MODIS también los ve y la diferencia entre
-sensores se reduce. Que el factor **varíe con la estación** es justamente la razón de calibrar por
-periodo y no con un único número global.
+En el parquet de ejemplo el factor varía según el periodo del año. Esta variación motiva calcular
+factores por mes o semana, pero por sí sola no demuestra la causa de las diferencias entre sensores.
 
 ## 4. Serie armonizada
 
@@ -76,10 +76,43 @@ si solo tiene MODIS            →  valor = modis_cd × factor(p)          [ESTI
 si solo tiene VIIRS            →  valor = viirs_cd × factor(p)          [ESTIMADO]
 ```
 
-Los valores estimados se dibujan con **trama rayada** en el calendario y en la documentación. Antes
-de 2012 todo es estimado; desde 2012 todo es observado.
+Los valores estimados se dibujan con **trama rayada**. También puede haber periodos estimados después
+de 2012. **Limitación pendiente:** aplicar el factor unión/MODIS a VIIRS sin MODIS no está justificado
+por esa calibración y puede inflar el resultado; el ranking y el total armonizado siguen siendo
+provisionales hasta corregir o justificar ese caso.
 
-## 5. Anomalías
+## 5. Validación retrospectiva de la estimación desde MODIS
+
+Se agrega por mes la unión observada de celdas-día de MODIS y VIIRS. Para cada año **completo**
+elegible dentro del solape configurado (2012–2025), se excluyen **todos los meses de ese año**,
+se recalibran los factores unión/MODIS con los demás años y se estima el año apartado usando solo
+sus celdas-día MODIS y los factores mensuales. Se compara la suma de los doce meses estimados con
+la suma de los doce meses de la unión observada. El **error absoluto porcentual anual** es
+`100 × |estimado − observado| / observado`; el error típico se resume con la **mediana** de esos
+errores anuales. El script también informa los valores por año, el error firmado, el MAPE, el WAPE,
+el número de años y los meses que recurrieron al factor global. Cada año evaluado debe estar dentro
+de la cobertura global del archivo y tener detecciones de ambos sensores en los 12 meses; los años
+que no cumplen se excluyen y se muestran con el motivo. Tener detecciones cada mes **no demuestra**
+cobertura satelital completa. Si no hay al menos tres periodos útiles de entrenamiento se omite el
+año, en vez de inventar un factor.
+
+Ejecutar `python backend/scripts/validacion_retrospectiva.py` usa la zona predeterminada y el parquet
+local sin modificarlo. La validación es retrospectiva: el entrenamiento puede incluir años posteriores
+al evaluado. Contrasta contra la **unión satelital, no contra incendios confirmados en campo**. No
+valida directamente las estimaciones anteriores a 2012, otros departamentos ni el caso de VIIRS sin
+MODIS. El rango p25–p75 es dispersión de cocientes, no un intervalo de confianza garantizado.
+
+La participante ejecutó esta validación sobre su parquet local de **2 212 061 filas** para Perú:
+14 años (2012–2025), **mediana del error absoluto anual 4,94 %**, MAPE 7,01 %, WAPE 7,04 % y mayor
+error absoluto anual 19,70 % (2025). La mediana del error firmado fue +2,21 %; ningún mes evaluado
+recurrió al factor global. El resultado comunicado y la tabla completa están en
+[`validacion-retrospectiva.md`](validacion-retrospectiva.md). No implica que el error de cada año sea
+4,94 %, ni demuestra cobertura completa o precisión frente a incendios confirmados.
+
+Como referencia separada, el parquet de ejemplo del repositorio dio una mediana de **7,63 %** en
+14 años; no mezclar las dos bases.
+
+## 6. Anomalías
 
 Para cada periodo de la serie armonizada:
 
@@ -93,7 +126,7 @@ Para cada periodo de la serie armonizada:
 El calendario no depende solo del color: hay borde, símbolos ▲ (alto) y ◆ (extremo), trama para lo
 estimado y texto alternativo en cada celda para lectores de pantalla.
 
-## 6. Límites que declaramos
+## 7. Límites que declaramos
 
 1. **Supuesto de estabilidad**: el factor asume que la diferencia de sensibilidad entre sensores es
    estable en el tiempo. No modela cambios de versión del algoritmo (MODIS C6.1, VIIRS 2.0), ni la

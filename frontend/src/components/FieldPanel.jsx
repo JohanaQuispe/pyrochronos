@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react'
+import React, { useCallback, useEffect, useRef, useState } from 'react'
 import { api } from '../api.js'
 
 function Metric({ label, value, detail }) {
@@ -15,20 +15,24 @@ function Status({ good, children }) {
   </span>
 }
 
-export default function FieldPanel({ zoneParams }) {
+export default function FieldPanel({ zoneParams, bbox }) {
   const [recent, setRecent] = useState(null)
   const [geofences, setGeofences] = useState(null)
   const [groundtruth, setGroundtruth] = useState(null)
   const [errors, setErrors] = useState([])
   const [loading, setLoading] = useState(true)
+  const requestId = useRef(0)
 
   const refresh = useCallback(async () => {
+    const id = ++requestId.current
     setLoading(true)
+    setRecent(null)
     const tasks = await Promise.allSettled([
       api.recent(zoneParams),
       api.geofences(),
       api.groundtruth(),
     ])
+    if (id !== requestId.current) return
     setRecent(tasks[0].status === 'fulfilled' ? tasks[0].value : null)
     setGeofences(tasks[1].status === 'fulfilled' ? tasks[1].value : null)
     setGroundtruth(tasks[2].status === 'fulfilled' ? tasks[2].value : null)
@@ -36,11 +40,12 @@ export default function FieldPanel({ zoneParams }) {
     setLoading(false)
   }, [zoneParams])
 
-  useEffect(() => { refresh() }, [refresh])
+  useEffect(() => { refresh(); return () => { requestId.current += 1 } }, [refresh])
 
   const counts = groundtruth?.summary?.counts || {}
   const verdictTotal = groundtruth?.summary?.total
   const fences = geofences?.items || []
+  const covered = Array.isArray(recent?.meta?.bbox) && bbox && recent.meta.bbox[0] <= bbox[0] && recent.meta.bbox[1] <= bbox[1] && recent.meta.bbox[2] >= bbox[2] && recent.meta.bbox[3] >= bbox[3]
 
   return <section className="space-y-4" aria-labelledby="field-title">
     <div className="flex flex-wrap items-end justify-between gap-3">
@@ -57,7 +62,7 @@ export default function FieldPanel({ zoneParams }) {
     <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
       <Metric label="Focos recientes" value={recent?.available ? (recent.total ?? 0).toLocaleString('es-PE') : '—'} detail={recent?.available ? (recent.empty ? 'Sin detecciones en esta zona' : `Último dato: ${recent.last_day || 'fecha no informada'}`) : (recent?.reason || 'Datos NRT no disponibles')} />
       <Metric label="Últimos 7 días" value={recent?.available && !recent.empty ? (recent.last_7_days ?? 0).toLocaleString('es-PE') : '—'} detail="Detecciones del almacén NRT" />
-      <Metric label="Geocercas activas" value={geofences?.count ?? '—'} detail="Ubicaciones registradas por usuarios de Telegram" />
+      <Metric label="Ubicaciones registradas" value={geofences?.count ?? '—'} detail="No confirma que el bot esté activo" />
       <Metric label="Validaciones" value={verdictTotal == null ? '—' : verdictTotal.toLocaleString('es-PE')} detail="Veredictos humanos guardados" />
     </div>
 
@@ -71,10 +76,11 @@ export default function FieldPanel({ zoneParams }) {
           <div className="mt-4 flex flex-wrap gap-2">
             <span className="chip">MODIS: {recent.per_source?.MODIS ?? 0}</span>
             <span className="chip">VIIRS: {recent.per_source?.VIIRS ?? 0}</span>
-            <span className="chip">{recent.days_covered ?? 0} días cubiertos</span>
+            <span className="chip">{recent.days_covered ?? 0} días con detecciones</span>
           </div>
           <p className="mt-3 text-[11px] leading-relaxed text-zinc-500">Último día disponible: {recent.last_day || 'no informado'}. Descarga: {recent.meta?.fetched_at || 'fecha no informada'}. Estos datos se consultan desde el almacén, no directamente desde FIRMS.</p>
         </> : <p className="mt-4 text-[12px] leading-relaxed text-zinc-400">{recent?.reason || 'El servicio no devolvió información reciente.'} El calendario histórico funciona de forma independiente.</p>}
+        <p className="mt-2 text-[11px] leading-relaxed text-zinc-500">{covered ? 'La descarga cubre el recuadro de la zona.' : 'Cobertura de la zona no verificada; la ausencia de detecciones no confirma que no existan focos.'} Puede estar desactualizada y no es una consulta en vivo.</p>
       </section>
 
       <section className="card p-4">

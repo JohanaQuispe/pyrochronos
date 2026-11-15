@@ -28,6 +28,7 @@ const meta = {
   zones: [
     { key: 'peru', name: 'Peru', bbox: [-81.5, -18.5, -68.5, 0.5], note: '' },
     { key: 'madrededios', name: 'Madre de Dios', bbox: [-70.6, -13.4, -68.6, -11], note: '' },
+    { key: 'd_15', name: 'Lima', bbox: [-77.9, -13.4, -75.5, -10.2], kind: 'department' },
   ],
   default_zone: 'peru', coverage: calendar.meta.coverage, measures: [], default_measure: 'cell_days',
   cell_deg: 0.01, sources: [], thresholds: {}, quality: {}, months: [], max_area_deg2: 300,
@@ -40,6 +41,8 @@ global.fetch = async (url) => {
   calls += 1
   urls.push(String(url))
   const body = url.includes('/api/meta') ? meta
+    : url.includes('/api/assistant') ? { answer: 'No hay datos recientes cargados; verifica en campo.' }
+    : url.includes('/api/departments/') ? { type: 'Feature', geometry: { type: 'Polygon', coordinates: [[[-77,-12],[-76,-12],[-76,-11],[-77,-12]]] }, properties: { name: 'Lima' } }
     : url.includes('/api/recent/hotspots') ? { type: 'FeatureCollection', features: [], meta: { available: false, total: 0, shown: 0, sampled: false } }
     : url.includes('/api/recent?') ? { available: false, reason: 'Sin datos NRT cargados.', meta: {} }
       : url.includes('/api/geofences') ? { count: 0, items: [] }
@@ -119,6 +122,15 @@ sensor.value = 'viirs'
 sensor.dispatchEvent(new dom.window.Event('change', { bubbles: true }))
 await new Promise((r) => setTimeout(r, 100))
 checks.push(['filtro VIIRS en petición', urls.some((url) => url.includes('/api/recent/hotspots') && url.includes('sources=viirs'))])
+const questionButton = [...root.querySelectorAll('button')].find((button) => button.textContent === '¿Hay focos recientes?')
+questionButton.click()
+await new Promise((r) => setTimeout(r, 100))
+checks.push(['consulta del asistente', root.textContent.includes('No hay datos recientes cargados; verifica en campo.') && urls.some((url) => url.includes('/api/assistant'))])
+const zoneSelect = root.querySelector('#zone-select')
+zoneSelect.value = 'd_15'
+zoneSelect.dispatchEvent(new dom.window.Event('change', { bubbles: true }))
+await new Promise((r) => setTimeout(r, 150))
+checks.push(['selección departamental', urls.some((url) => url.includes('/api/calendar') && url.includes('zone=d_15')) && urls.some((url) => url.includes('/api/departments/d_15'))])
 let failed = 0
 for (const [name, ok] of checks) {
   console.log(`${ok ? 'ok  ' : 'FALLO'} ${name}`)

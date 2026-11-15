@@ -39,11 +39,12 @@ def main() -> int:
     sources = tuple(s.strip() for s in args.sources.split(",") if s.strip())
 
     print(f"Descargando {args.days} dia(s) para {bbox} desde {sources} ...")
-    df = nrt.fetch_recent(cfg, bbox, days=args.days, sources=sources)
-    if df.empty:
-        print("Sin detecciones nuevas (o la API no respondio). No se sobrescriben datos previos.")
+    try:
+        df = nrt.fetch_recent(cfg, bbox, days=args.days, sources=sources, strict=True)
+    except Exception as exc:
+        print(f"No se pudo completar la descarga; se conservan los datos anteriores: {nrt.redact(str(exc))}", file=sys.stderr)
         return 1
-    meta = nrt.save_recent(cfg, df, sources, args.days)
+    meta = nrt.save_recent(cfg, df, sources, args.days, bbox=bbox)
     print(f"Guardado {meta['rows']} detecciones ({meta['first_day']} .. {meta['last_day']}) en {nrt.recent_path(cfg)}")
     print("La web ya puede mostrarlas: /api/recent y el semaforo de temporada las usan.")
     return 0

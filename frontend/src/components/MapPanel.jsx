@@ -2,18 +2,23 @@ import React, { useEffect, useRef, useState } from 'react'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import { fmt } from '../lib/scale'
+import { api } from '../api'
 
 const START_VIEW = { center: [-9.5, -75.0], zoom: 5 }
 
-export default function MapPanel({ bbox, hotspots, meta, onBBoxChange, loading, visible = true,
+export default function MapPanel({ bbox, zone, hotspots, meta, onBBoxChange, loading, visible = true,
   layer, onLayerChange, source, onSourceChange, highConfidence, onHighConfidenceChange, mapError }) {
   const mapEl = useRef(null)
   const mapRef = useRef(null)
   const rectRef = useRef(null)
+  const boundaryRef = useRef(null)
   const dotsRef = useRef(null)
+  const [boundaryError, setBoundaryError] = useState(false)
   const drawRef = useRef({ active: false, start: null })
   const [drawing, setDrawing] = useState(false)
   const [coords, setCoords] = useState({ w: '', s: '', e: '', n: '' })
+  const coverage = hotspots?.meta?.bbox
+  const fullCoverage = Array.isArray(coverage) && bbox && coverage[0] <= bbox[0] && coverage[1] <= bbox[1] && coverage[2] >= bbox[2] && coverage[3] >= bbox[3]
 
   useEffect(() => {
     if (mapRef.current || !mapEl.current) return undefined
@@ -83,6 +88,26 @@ export default function MapPanel({ bbox, hotspots, meta, onBBoxChange, loading, 
     }
     setCoords({ w: bbox[0], s: bbox[1], e: bbox[2], n: bbox[3] })
   }, [bbox])
+
+  // Límite departamental simplificado; no se utiliza para zonas dibujadas.
+  useEffect(() => {
+    const map = mapRef.current
+    if (!map) return undefined
+    if (boundaryRef.current) { map.removeLayer(boundaryRef.current); boundaryRef.current = null }
+    setBoundaryError(false)
+    if (!zone?.startsWith('d_')) return undefined
+    const ctrl = new AbortController()
+    api.department(zone, ctrl.signal).then((geometry) => {
+      boundaryRef.current = L.geoJSON(geometry, { style: { color: '#e4e4e7', weight: 2, fillOpacity: 0.03 }, interactive: false }).addTo(map)
+    }).catch((err) => { if (err.name !== 'AbortError') setBoundaryError(true) })
+    return () => ctrl.abort()
+  }, [zone])
+
+  useEffect(() => {
+    if (!visible || !bbox || !mapRef.current) return undefined
+    const timer = setTimeout(() => mapRef.current?.fitBounds([[bbox[1], bbox[0]], [bbox[3], bbox[2]]], { padding: [20, 20], maxZoom: 9 }), 100)
+    return () => clearTimeout(timer)
+  }, [bbox, visible])
 
   // focos
   useEffect(() => {
@@ -196,9 +221,10 @@ export default function MapPanel({ bbox, hotspots, meta, onBBoxChange, loading, 
           : layer === 'history' ? 'Historial del periodo elegido; no indica focos activos ahora.'
             : !hotspots ? 'Consultando datos NRT guardados; no es una consulta en vivo.'
               : !hotspots.meta.available ? 'Sin datos NRT cargados. No significa que no haya focos.'
-                : `NRT guardado · última descarga: ${hotspots.meta.fetched_at || 'desconocida'} · última detección: ${hotspots.meta.last_day || 'desconocida'}. Puede estar desactualizado; no es tiempo real.`}
+                : `NRT guardado · última descarga: ${hotspots.meta.fetched_at || 'desconocida'} · última detección: ${hotspots.meta.last_day || 'desconocida'}. ${fullCoverage ? '' : 'Cobertura completa de la zona no verificada. '}Puede estar desactualizado; no es tiempo real.`}
       </p>
 
+      {zone?.startsWith('d_') && <p className="px-4 pb-2 text-[10.5px] text-zinc-400">{boundaryError ? 'No se pudo cargar el contorno.' : 'Contorno departamental simplificado (INEI 2007); puede diferir del límite oficial actual.'}</p>}
       <div className="flex items-end gap-1.5 px-4 pb-3">
         {[['w', 'O'], ['s', 'S'], ['e', 'E'], ['n', 'N']].map(([key, text]) => (
           <label key={key} className="flex-1 text-[9.5px] text-mist">

@@ -35,6 +35,19 @@
 8. **El aviso automático por hora** (`watch_alerts.py --loop 3600 --send`) no se ha ejecutado
    todavía en un equipo con internet.
 
+## Validación retrospectiva
+
+- Probada con el **parquet del repositorio** (1 323 016 filas): validación mensual con exclusión del
+  año evaluado, 14 años (2012–2025), mediana del error absoluto anual **7,63 %**, promedio **7,00 %**
+  y máximo **16,54 %**, frente a la unión MODIS+VIIRS. Ver `docs/metodologia.md` para los límites.
+- **Resultado comunicado por la participante:** ejecutó `python backend/scripts/validacion_retrospectiva.py`
+  con su parquet local de 2 212 061 filas; 14 años (2012–2025), mediana del error absoluto anual
+  **4,94 %**, MAPE **7,01 %**, WAPE **7,04 %**, máximo **19,70 %** en 2025. El resultado fue
+  compartido en el chat; el parquet local no está disponible en este entorno para reproducirlo aquí.
+  La tabla completa y la huella del archivo están en `docs/validacion-retrospectiva.md`.
+- La prueba no comprueba incendios de campo, no mide error real anterior a 2012 y no resuelve la
+  estimación de VIIRS sin MODIS. Los doce meses con detecciones no prueban cobertura completa.
+
 ## Cifras locales y armonización
 
 - **Resultado comunicado por la participante:** `numeros_pitch.py` sobre su parquet local informa
@@ -56,3 +69,33 @@
 - **POR VERIFICAR:** recepción real del nuevo formato del aviso y del pin en Telegram con la descarga
   NRT actualizada. Viento puntual, carreteras, agua, poblados, prioridad por exposición, recurrencia
   local y descarga de mapas sin conexión todavía no están implementados. No usarlos para decidir rutas.
+
+## Consultas en la app y avisos automáticos (pendiente de prueba real)
+
+- La caja de preguntas de la app y el bot usan el mismo respondedor de reglas, no un modelo de IA
+  ni un chat de Telegram incrustado. Las preguntas se limitan a datos recientes guardados, temporada,
+  sensores y funcionamiento de avisos; no calcula viento, rutas ni cercanía a viviendas.
+- El modo `bot.py --poll --auto-refresh` intenta descargar FIRMS cada 15 minutos para la zona elegida.
+  Si alguna fuente falla, conserva la descarga anterior y no envía alertas en ese ciclo. El bot solo
+  envía detecciones de los últimos tres días UTC si la descarga cubre la zona y tiene hasta seis
+  horas. Filtra por distancia y FRP sobre p95 por sensor, con mínimo 20 MW: **no alerta sobre todos
+  los focos**. No hay garantía de detección, tiempo de entrega o disponibilidad.
+- Las pruebas automáticas simulan FIRMS y Telegram, e incluyen falta de datos, fallos, datos viejos,
+  cobertura y duplicados. **POR VERIFICAR:** acceso real a las tres fuentes configuradas, consulta
+  en Telegram, actualización en ejecución y recepción de alerta y pin en el teléfono con la cuenta
+  de la participante. Es necesario dejar encendido el equipo y el proceso; no es un servicio 24/7.
+- La resolución temporal guardada es el día UTC, no el minuto de detección. Un foco de calor puede
+  no ser un incendio; no sustituye avisos oficiales ni confirmación en campo.
+
+## Departamentos y conexión
+
+- El selector departamental usa polígonos **simplificados INEI 2007**; fuente, licencia y límites en
+  `data/geo/README.md`. No son fronteras oficiales actuales y la precisión cerca de los bordes es
+  limitada. Los focos se filtran antes de agregarse en celdas-día. Cada celda fronteriza puede
+  contener focos de más de un departamento.
+- El filtro de la web no cambia la zona del bot ni el radio de Telegram. La meteorología POWER no
+  se ha precargado por departamento; el boletín preexistente solo está disponible en zonas originales.
+- Un `Failed to fetch` indica una conexión fallida entre navegador y servidor: no demuestra falta
+  de datos. La causa concreta en el equipo de la participante está **POR VERIFICAR**.
+- Se corrigió la conversión de fechas de datos NRT para versiones recientes de pandas. La cuenta
+  «últimos 7 días» se calcula respecto de la fecha UTC actual, no del último día guardado.

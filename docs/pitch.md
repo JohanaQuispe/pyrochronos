@@ -39,6 +39,26 @@ convertir VIIRS por sí solo a la unión. Puede inflar estimaciones, especialmen
 Hay que corregir o justificar el método, ejecutar de nuevo el cálculo con los archivos locales y
 comprobar las cifras antes de presentarlas como resultado definitivo.
 
+## Validación retrospectiva (reproducible)
+
+La participante ejecutó la validación sobre su **parquet local de 2 212 061 filas** en Perú. Al
+retirar cada año completo del solape de la calibración y estimarlo desde MODIS, la **mediana del
+error absoluto porcentual anual fue 4,94 % en 14 años (2012–2025)**, frente a la unión observada
+MODIS+VIIRS. El error promedio (MAPE) fue **7,01 %**, el ponderado (WAPE) **7,04 %** y el mayor error
+anual **19,70 %** (2025). Ver [los resultados por año](validacion-retrospectiva.md).
+
+> «Validamos retrospectivamente 14 años del solape: retiramos cada año de la calibración y lo
+> estimamos desde MODIS. La mediana del error absoluto anual fue 4,94 %, frente a la unión de los
+> dos satélites».
+
+El entrenamiento puede incluir años posteriores al año evaluado. La unión de sensores **no es verdad
+de campo**: esto no mide la precisión de detección de incendios. Tampoco valida directamente las
+estimaciones anteriores a 2012 ni corrige el caso de VIIRS sin MODIS. Cada año evaluado tiene
+detecciones de ambos sensores en los 12 meses, lo que no garantiza cobertura completa.
+
+El parquet de ejemplo del repositorio es distinto y dio **7,63 %** de mediana; no mezclar sus
+resultados con los del archivo local.
+
 ## Qué hace y qué no hace
 
 PyroChronos está dirigido a **brigadas de bomberos**: muestra estacionalidad y anomalías históricas y

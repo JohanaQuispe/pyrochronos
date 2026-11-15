@@ -33,14 +33,15 @@ export default function TopBar({ meta, state, setState, onShortcut, downloads, o
           </details>
         </div>
         <div className="flex flex-wrap items-center gap-x-3 gap-y-2 border-t border-white/[0.06] py-3">
-          <span className="mr-1 text-[10px] font-semibold uppercase tracking-[0.15em] text-zinc-500">Área de análisis</span>
+          <span className="mr-1 text-[10px] font-semibold uppercase tracking-[0.15em] text-zinc-500">Zona o departamento</span>
           <label className="sr-only" htmlFor="zone-select">Zona</label>
           <select id="zone-select" className="input min-w-0 max-w-full sm:min-w-[200px]" value={state.zone} onChange={(e) => {
             const key = e.target.value
             const z = zones.find((zz) => zz.key === key)
             setState((s) => ({ ...s, zone: key, bbox: z ? z.bbox : s.bbox, year: null }))
           }}>
-            {zones.map((z) => <option key={z.key} value={z.key}>{z.name}</option>)}
+            <optgroup label="Zonas generales">{zones.filter((z) => z.kind !== 'department').map((z) => <option key={z.key} value={z.key}>{z.name}{z.key === 'peru' ? '' : ' · zona aproximada'}</option>)}</optgroup>
+            <optgroup label="Departamentos · límites simplificados">{zones.filter((z) => z.kind === 'department').map((z) => <option key={z.key} value={z.key}>{z.name}</option>)}</optgroup>
             {state.zone === 'custom' && <option value="custom">Zona dibujada</option>}
           </select>
           <label className="sr-only" htmlFor="range-select">Rango de fechas</label>
