@@ -58,7 +58,7 @@ python backend/scripts/build_dataset.py --raw data/raw
 ### Pruebas
 
 ```bash
-python -m pytest backend/tests -q      # 14 pruebas: normalización, cuadrícula, armonización, anomalías, API
+python -m pytest backend/tests -q      # 28 pruebas: normalización, cuadrícula, armonización, anomalías, API, asistente de Telegram
 cd frontend && npm run smoke           # monta la interfaz en jsdom y comprueba que renderiza sin errores
 ```
 
@@ -66,9 +66,15 @@ cd frontend && npm run smoke           # monta la interfaz en jsdom y comprueba 
 
 ```bash
 python backend/scripts/alert.py --zone madrededios          # semáforo en la terminal
-export TELEGRAM_BOT_TOKEN=... TELEGRAM_CHAT_ID=...
+python backend/scripts/telegram_setup.py --guide             # crear el bot en @BotFather
+python backend/scripts/telegram_setup.py --check             # ¿el token funciona?
+python backend/scripts/telegram_setup.py --chat-id           # descubrir tu chat_id
+python backend/scripts/telegram_setup.py --write-env --test   # guardar en .env y probar
 python backend/scripts/watch_alerts.py --zones peru,madrededios --send
 ```
+
+El bot se crea a mano en **@BotFather** (Telegram no permite crearlo por API); el resto lo hace
+`telegram_setup.py` sin imprimir nunca el token completo.
 
 ### Focos recientes (NRT, ~3 h de latencia)
 

@@ -51,9 +51,29 @@ La web detecta los datos automáticamente: aparece la etiqueta *"reciente: N foc
 
 ### Vigilancia automática por Telegram
 
+**Crear el bot (una sola vez, a mano).** Telegram solo permite crear bots desde @BotFather,
+así que ese paso no se puede automatizar. Sí se automatiza todo lo demás:
+
+```bash
+python backend/scripts/telegram_setup.py --guide       # los 5 pasos de @BotFather
+# (crear el bot en el telefono, abrir su chat y pulsar /start)
+python backend/scripts/telegram_setup.py --check       # getMe: ¿el token es válido?
+python backend/scripts/telegram_setup.py --chat-id     # getUpdates: cuál es tu chat_id
+python backend/scripts/telegram_setup.py --write-env   # guarda en .env con permisos 600
+python backend/scripts/telegram_setup.py --test        # manda un mensaje de prueba
+```
+
+- El token **nunca** se imprime completo ni entra en el código: se lee del entorno o de `.env`
+  (que está en `.gitignore`).
+- `.env` no se carga solo: `set -a && . ./.env && set +a` antes de usar los demás scripts.
+- Un chat de grupo (id negativo) sirve igual: añade el bot al grupo, menciónalo una vez y `--chat-id`
+  lo mostrará.
+
+**Vigilar y avisar:**
+
 ```bash
 export TELEGRAM_BOT_TOKEN=... TELEGRAM_CHAT_ID=...
-python backend/scripts/watch_alerts.py --zones peru,madrededios,madrededios --loop 3600 --send
+python backend/scripts/watch_alerts.py --zones peru,madrededios --loop 3600 --send
 ```
 
 - Revisa cada hora y **solo avisa cuando el nivel sube** (guarda estado en `data/derived/alert_state.json`).
