@@ -86,6 +86,7 @@ python backend/scripts/download_power.py --zone madrededios --years 5   # contex
 ```
 
 Detalles, comandos del bot y límites en [`docs/campo.md`](docs/campo.md).
+Guía completa de configuración (BotFather, `.env`, checklist) en [`docs/bot-paso-a-paso.md`](docs/bot-paso-a-paso.md).
 
 ### Focos recientes (NRT, ~3 h de latencia)
 
