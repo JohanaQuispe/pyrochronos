@@ -154,12 +154,12 @@ export default function MapPanel({ bbox, hotspots, meta, onBBoxChange, loading, 
 
   return (
     <section
-      className="flex h-full min-h-[420px] flex-col overflow-hidden rounded-2xl border border-white/[0.06] bg-white/[0.015]"
+      className="flex h-full min-h-[420px] flex-col overflow-hidden rounded-2xl border border-white/[0.08] bg-[#111114] shadow-soft"
       aria-labelledby="map-title"
     >
       <div className="flex items-center justify-between gap-2 px-4 py-3">
         <div>
-          <h2 id="map-title" className="text-[13px] font-medium text-white">Zona de interés</h2>
+          <h2 id="map-title" className="text-[16px] font-semibold text-white">Explorar detecciones</h2>
           <p className="hint">Toca un punto para ver sus datos y coordenadas</p>
         </div>
         <button

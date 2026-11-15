@@ -26,8 +26,8 @@ export default function CalendarHeatmap({ data, onPickYear, palette = 'fuego' })
       const p = periods[xi]
       const label = isWeek ? `semana ${p}` : MONTHS[p - 1]
       if (value === null) return `${label} de ${year}: sin dato (fuera de la cobertura de los satélites)`
-      const parts = [`${label} de ${year}: ${fmt(value)} celdas-día`]
-      if (cal.estimated[yi][xi]) parts.push('valor estimado desde MODIS')
+      const parts = [`${label} de ${year}: ${fmt(value)} ${meta.measure_label}`]
+      if (cal.estimated[yi][xi]) parts.push('valor estimado; sujeto a revisión')
       if (cal.levels[yi][xi]) {
         parts.push(
           `percentil ${cal.anomaly_pct[yi][xi]} (${cal.levels[yi][xi] === 'extremo' ? 'muy por encima de lo normal' : cal.levels[yi][xi] === 'alto' ? 'por encima de lo normal' : 'dentro de lo normal'})`,
@@ -35,7 +35,7 @@ export default function CalendarHeatmap({ data, onPickYear, palette = 'fuego' })
       }
       return parts.join(' · ')
     },
-    [cal, isWeek, periods],
+    [cal, isWeek, periods, meta.measure_label],
   )
 
   const onKeyDown = (event) => {
@@ -78,7 +78,7 @@ export default function CalendarHeatmap({ data, onPickYear, palette = 'fuego' })
         <ul className="flex flex-wrap items-center gap-3 text-[11px] text-mist">
           <li className="flex items-center gap-1.5">
             <span className="inline-block h-3 w-3 rounded-[3px] hatch border border-line" aria-hidden="true" />
-            estimado (antes de 2012)
+            estimado
           </li>
           <li className="flex items-center gap-1.5">
             <span aria-hidden="true" className="text-[10px] text-white">▲</span> por encima de lo normal

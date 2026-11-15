@@ -43,7 +43,7 @@ export default function Tabs({ items, value, onChange, className = '' }) {
             tabIndex={active ? 0 : -1}
             type="button"
             onClick={() => onChange(item.key)}
-            className={`relative rounded-lg px-3 py-2 text-[13.5px] transition ${
+            className={`relative whitespace-nowrap px-3 py-4 text-[13px] font-medium transition ${
               active ? 'text-white' : 'text-zinc-500 hover:text-zinc-200'
             }`}
           >

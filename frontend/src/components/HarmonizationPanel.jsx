@@ -16,7 +16,7 @@ export default function HarmonizationPanel({ data }) {
 
       <div className="mt-3 grid gap-3 sm:grid-cols-3">
         <div className="rounded-lg border border-line bg-panelHi/60 p-2">
-          <p className="label">Factor VIIRS/MODIS</p>
+          <p className="label">Factor unión / MODIS</p>
           <p className="text-lg font-semibold text-white">{c.applicable ? fmt(c.global_factor, 2) : 'no aplica'}</p>
           <p className="text-[10.5px] leading-snug text-mist">
             Cuántas veces más actividad ve el conjunto de los dos satélites que MODIS solo. Se calcula solo con los años
@@ -48,15 +48,13 @@ export default function HarmonizationPanel({ data }) {
       <div className="mt-3 space-y-2 text-[11.5px] leading-relaxed text-slate-200">
         <p>
           <strong className="text-white">Qué medimos.</strong> La medida principal es <em>celdas-día con fuego</em>: una
-          celda de {meta.cell_deg}° (≈1,1 km) cuenta una vez por día y satélite. Así la mayor resolución de VIIRS
-          (≈375 m) no infla los años recientes. La segunda medida, <em>focos detectados</em>, cuenta cada detección
-          suelta y siempre se muestra como referencia, no como la serie armonizada.
+          celda de {meta.cell_deg}° cuenta una vez por día en la unión de sensores. Esto reduce la duplicación, pero
+          no elimina las diferencias de resolución ni de cobertura. La medida <em>focos detectados</em> cuenta cada detección.
         </p>
         <p>
-          <strong className="text-white">Qué es “estimado”.</strong> Antes de 2012 solo existe MODIS. El valor de esos
-          periodos se estima multiplicando lo observado por el factor del mismo mes (o semana) del año, con su banda de
-          incertidumbre. En el calendario aparecen con trama rayada. Desde 2012 el valor es observado por los dos
-          satélites.
+          <strong className="text-white">Qué es “estimado”.</strong> Cuando solo hay detecciones de un sensor en un periodo,
+          el programa aplica un factor y marca el valor con trama. Se está revisando el uso del factor unión/MODIS en
+          periodos con VIIRS sin MODIS; por ello las cifras armonizadas son provisionales.
         </p>
         <p>
           <strong className="text-white">Anomalías.</strong> Cada periodo se compara con el mismo periodo (±1) de los
