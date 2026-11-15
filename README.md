@@ -58,7 +58,7 @@ python backend/scripts/build_dataset.py --raw data/raw
 ### Pruebas
 
 ```bash
-python -m pytest backend/tests -q      # 28 pruebas: normalización, cuadrícula, armonización, anomalías, API, asistente de Telegram
+python -m pytest backend/tests -q      # 30 pruebas: normalización, cuadrícula, armonización, anomalías, API, Telegram
 cd frontend && npm run smoke           # monta la interfaz en jsdom y comprueba que renderiza sin errores
 ```
 

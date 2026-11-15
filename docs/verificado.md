@@ -14,6 +14,7 @@
 | **Suomi-NPP dejó de entregar datos el 2026-11-02** (aviso de FIRMS) | Aviso oficial en la página del API |
 | El entorno de construcción no alcanza `firms.modaps.eosdis.nasa.gov` | Probado (conexión cortada) |
 | Los archivos por país de 2026 **todavía no existen** (404) | Petición directa al archivo |
+| **Un bot real de Telegram entrega los mensajes de PyroChronos** | La participante ejecutó `telegram_setup.py --test` el 2026-11-15 y el mensaje llegó a su teléfono (token válido, `chat_id` correcto, `sendMessage` funcionando) |
 
 ## POR VERIFICAR
 
@@ -27,3 +28,9 @@
 4. **Comportamiento de `type` en años muy antiguos** (¿está poblado desde 2000?). Se usa tal cual llega.
 5. **Cambio de sensibilidad de MODIS en 2002** (Terra solo → Terra + Aqua). No corregido.
 6. **Escala exacta de `confidence` de VIIRS** entre versiones. Se usa la categórica `l/n/h`.
+7. **El boletín real con cifras no se ha enviado todavía a Telegram.** Lo confirmado es el mensaje
+   de prueba; el texto largo (`notify_telegram.py --send`) usa Markdown y hay un reintento
+   automático en texto plano si Telegram rechaza el formato, pero **ese reintento no se ha visto
+   funcionar contra el servicio real** (solo con una respuesta 400 simulada en las pruebas).
+8. **El aviso automático por hora** (`watch_alerts.py --loop 3600 --send`) no se ha ejecutado
+   todavía en un equipo con internet.

@@ -93,3 +93,48 @@ def test_guide_mentions_botfather(ts, capsys):
     assert ts.main(["--guide"]) == 0
     out = capsys.readouterr().out
     assert "@BotFather" in out and "/newbot" in out
+
+
+class FakeResponse:
+    def __init__(self, status_code: int, body: dict | str):
+        self.status_code = status_code
+        self._body = body
+
+    def json(self):
+        if isinstance(self._body, str):
+            raise ValueError("no json")
+        return self._body
+
+    @property
+    def text(self) -> str:
+        return self._body if isinstance(self._body, str) else str(self._body)
+
+
+def test_send_telegram_retries_without_markdown(monkeypatch):
+    """Si Telegram rechaza el Markdown, el mensaje debe llegar igual (texto plano)."""
+    from pyro import notify
+
+    seen = []
+
+    def fake_post(url, data=None, timeout=None):
+        seen.append(dict(data))
+        if "parse_mode" in data:
+            return FakeResponse(400, "Bad Request: can't parse entities")
+        return FakeResponse(200, {"ok": True, "result": {"message_id": 7}})
+
+    monkeypatch.setattr(notify.requests, "post", fake_post)
+    out = notify.send_telegram("hola *mundo", token="t", chat_id="1")
+    assert out["ok"] is True
+    assert len(seen) == 2
+    assert seen[0]["parse_mode"] == "Markdown"
+    assert "parse_mode" not in seen[1]
+    assert seen[1]["text"] == "hola *mundo"
+
+
+def test_send_telegram_without_credentials_raises(monkeypatch):
+    from pyro import notify
+
+    monkeypatch.delenv("TELEGRAM_BOT_TOKEN", raising=False)
+    monkeypatch.delenv("TELEGRAM_CHAT_ID", raising=False)
+    with pytest.raises(RuntimeError, match="faltan"):
+        notify.send_telegram("x")
