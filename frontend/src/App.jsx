@@ -3,6 +3,7 @@ import { api } from './api'
 import TopBar from './components/TopBar.jsx'
 import AlertStrip from './components/AlertStrip.jsx'
 import SummaryCards from './components/SummaryCards.jsx'
+import ClimateCard from './components/ClimateCard.jsx'
 import CalendarHeatmap from './components/CalendarHeatmap.jsx'
 import AnomalyChart from './components/AnomalyChart.jsx'
 import MapPanel from './components/MapPanel.jsx'
@@ -267,6 +268,7 @@ export default function App() {
 
             <div className="space-y-3">
               <SummaryCards data={data} />
+              <ClimateCard zone={state.zone} />
               <CalendarHeatmap
                 data={data}
                 palette={state.palette}

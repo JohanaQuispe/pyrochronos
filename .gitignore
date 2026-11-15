@@ -17,3 +17,7 @@ data/raw/
 data/derived/alert_state.json
 data/derived/recent.parquet
 data/derived/recent.json
+data/derived/geofences.json
+data/derived/groundtruth.json
+data/derived/alerts_sent.json
+data/derived/power_*.json

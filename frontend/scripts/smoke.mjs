@@ -16,7 +16,7 @@ global.getComputedStyle = dom.window.getComputedStyle
 global.requestAnimationFrame = (cb) => setTimeout(cb, 0)
 global.IS_REACT_ACT_ENVIRONMENT = false
 
-const payload = JSON.parse(readFileSync(process.argv[2] || '/tmp/payload_month.json', 'utf8'))
+const payload = JSON.parse(readFileSync(process.argv[2] || new URL('./fixtures/calendar-month.json', import.meta.url), 'utf8'))
 
 const entry = `
 import React from 'react'

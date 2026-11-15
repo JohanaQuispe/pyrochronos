@@ -26,5 +26,6 @@ export const api = {
   hotspots: (params, signal) => get('/api/hotspots', params, signal),
   alert: (params, signal) => get('/api/alert', params, signal),
   recent: (params, signal) => get('/api/recent', params, signal),
+  climate: (params, signal) => get('/api/climate-context', params, signal),
   csvUrl: (path, params) => `${BASE}${path}?${qs(params)}`,
 }
