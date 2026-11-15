@@ -255,7 +255,9 @@ python backend/scripts/download_power.py --zone madrededios --years 5
 
 ## 9. Cómo contarlo en el video (30 s)
 
-> "Un guardaparque comparte su ubicación con el bot y queda dentro de una geocerca de 10 km. Cuando
-> un foco supera el percentil 95 del FRP de su zona, recibe distancia, rumbo, el pin para ir en
-> Waze y tres botones para decir qué era. Eso convierte 1,3 millones de detecciones históricas en
-> una decisión de campo."
+> "Una persona de la brigada comparte su ubicación con el bot. Si un foco reciente cargado supera
+> el umbral de FRP de su sensor en la zona y está dentro del radio elegido, recibe distancia, rumbo,
+> coordenadas, un pin y tres botones para reportar qué era. Es una detección satelital que debe
+> confirmarse en campo, no una orden de despacho."
+
+El envío y el pin deben verificarse con datos recientes y Telegram; la app no consulta FIRMS en vivo.

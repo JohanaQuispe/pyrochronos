@@ -35,6 +35,15 @@
 8. **El aviso automático por hora** (`watch_alerts.py --loop 3600 --send`) no se ha ejecutado
    todavía en un equipo con internet.
 
+## Cifras locales y armonización
+
+- **Resultado comunicado por la participante:** `numeros_pitch.py` sobre su parquet local informa
+  2 212 061 detecciones, desde 2000-11-11 hasta 2026-11-01. No es el parquet del repositorio.
+- **POR VERIFICAR antes de presentar totales armonizados o ranking:** en `harmonize`, un periodo con
+  VIIRS pero sin MODIS se multiplica por el factor unión/MODIS. Ese factor no está calibrado para
+  convertir VIIRS a la unión y puede inflar los resultados. Revisar el método y recalcular con el
+  archivo local. Las cifras provisionales están en `docs/pitch.md`.
+
 ## Mapa táctico y alertas: límites operativos
 
 - El mapa separa el historial del archivo NRT local. La capa NRT **no se descarga en vivo**;

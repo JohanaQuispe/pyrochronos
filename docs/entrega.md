@@ -1,80 +1,45 @@
-# Lista de entrega (domingo, hasta las 24:00 de Lima)
+# Lista de entrega
 
-## 1. Lo que ya está listo en este repositorio
+## Datos usados
 
-- [x] Código completo en Python (FastAPI + pandas) y React (Vite + Tailwind + Leaflet).
-- [x] Licencia MIT (`LICENSE`) y declaración de IA (`docs/ia.md`).
-- [x] Metodología (`docs/metodologia.md`), procedencia de datos (`docs/procedencia.md`),
-      verificado / POR VERIFICAR (`docs/verificado.md`) y guion del pitch (`docs/pitch.md`).
-- [x] Datos reales cargados (`data/derived/detections.parquet`): 1 323 016 focos, 2000-11 a 2025-12.
-- [x] 74 pruebas de backend + 2 pruebas de humo del frontend (motor, API, bot y POWER).
-- [x] Frontend compilado en `backend/webapp` (no hace falta `npm install` para la demo).
+La participante ejecutó `python backend\scripts\numeros_pitch.py` sobre su parquet local: **2 212 061
+registros**, del **11-11-2000 al 01-11-2026**; 579 777 MODIS y 1 632 284 VIIRS. El parquet incluido
+en el repositorio es distinto; no sustituir los datos locales ni reconstruirlos desde archivos FIRMS.
+Las cifras calculadas y sus límites están en [`pitch.md`](pitch.md).
 
-## 1.b Textos listos para el formulario (copiar y pegar)
+**Pendiente prioritario:** revisar y corregir la estimación para periodos con VIIRS sin MODIS,
+volver a calcular con los datos locales y verificar resultados antes de citar totales armonizados o
+un ranking anual como definitivos. El año 2026 está incompleto.
+
+## Texto de propuesta (borrador; revisar antes de enviar)
 
 **Nombre:** PyroChronos
 
-**Una frase (≤140 caracteres):**
-> Calendario de fuego para brigadas de bomberos: armoniza 25 años de MODIS y VIIRS para anticipar la
-> temporada y confirmar focos en campo.
+**Una frase:** Calendario de focos de calor para brigadas de bomberos: compara datos de MODIS y VIIRS
+y apoya la vigilancia por zona.
 
-**Descripción corta (≤300 caracteres):**
-> Dos satélites, dos escalas: MODIS (1 km, desde 2000) y VIIRS (375 m, desde 2012) no se pueden
-> comparar directamente. PyroChronos los armoniza en un calendario común y lo convierte en un semáforo
-> de temporada y un bot que avisa a la brigada cuando un foco intenso aparece cerca.
+**Descripción:** PyroChronos reúne detecciones satelitales de NASA FIRMS en una cuadrícula común y
+muestra un calendario de estacionalidad y anomalías históricas. En los datos locales de la
+participante contiene 2 212 061 detecciones entre noviembre de 2000 y noviembre de 2026. El sistema
+incluye una capa de datos recientes previamente descargados y un bot de Telegram que puede avisar
+sobre focos intensos cercanos a una ubicación compartida, con coordenadas y botones de confirmación.
+Una detección no es necesariamente un incendio. La armonización y las alertas requieren las
+verificaciones indicadas en `docs/pitch.md` y `docs/verificado.md`. No predice incendios ni sustituye
+un aviso oficial.
 
-**Descripción larga:**
-> Las brigadas de bomberos forestales no saben con precisión cuándo arranca su temporada, no pueden
-> comparar este año con los anteriores (los registros de MODIS y VIIRS no son comparables) y se enteran
-> de los focos por una llamada. PyroChronos armoniza 25 años de focos de calor de NASA FIRMS en una
-> cuadrícula común de 0,01°, con un factor de calibración medido en los 14 años de solape (5,83 veces,
-> r = 0,98) y banda de incertidumbre; los años anteriores a 2012 se marcan como estimados. Sobre esa
-> base calcula estacionalidad, anomalías por percentil y un semáforo de temporada por zona, y lo lleva
-> al campo con un bot de Telegram: cuando un foco supera el percentil 95 de intensidad de su zona y cae
-> dentro del radio del usuario, envía distancia, rumbo, un pin y tres botones para confirmar qué era
-> (fuego real, quema agrícola o falsa alarma). El sistema no predice incendios ni sustituye un aviso
-> oficial, y lo dice en cada pantalla y en cada mensaje.
+**Público objetivo:** brigadas de bomberos forestales. Otros usuarios son alcance futuro no validado.
 
-**Público objetivo:** brigadas de bomberos forestales y comités de emergencia del Perú (amazonía sur y
-central). Guardaparques, agricultores y municipios son el siguiente alcance
-([`publico-objetivo.md`](publico-objetivo.md)).
+**Tecnologías:** Python (FastAPI, pandas), React (Vite, Tailwind, Leaflet), Parquet, Telegram Bot API,
+NASA FIRMS y NASA POWER. Licencia MIT.
 
-**Tecnologías:** Python (FastAPI, pandas, NumPy), React (Vite, Tailwind, Leaflet), Parquet, Bot API de
-Telegram, NASA FIRMS y NASA POWER. Licencia MIT.
+## Antes de entregar
 
-## 2. Lo que falta hacer a mano (30-45 min)
+- [ ] Resolver la limitación de armonización, recalcular y actualizar las cifras.
+- [ ] Revisar el mapa, filtros y reportes con los datos locales; no confundir historial con focos activos.
+- [ ] Comprobar descarga y fecha NRT; probar el nuevo mensaje y pin de Telegram en el teléfono.
+- [ ] Revisar que `.env` y credenciales no aparezcan en el repositorio, la pantalla ni la documentación.
+- [ ] Verificar propuesta, capturas y alcance; grabar únicamente cuando la aplicación esté lista.
 
-0. **Probar el semáforo**: abre "Qué hacer" y pon una fecha de referencia en septiembre (Madre de Dios)
-   para mostrar la ventana crítica. Vuelve con "Volver a la semana actual" antes de seguir.
-1. **Subir el repositorio a GitHub público** (o ponerlo público si ya está).
-   Verifica que `.env` **no** esté en el repo y que la licencia se vea en la portada.
-2. **Grabar el video de 3 minutos** siguiendo `docs/pitch.md`:
-   - Graba la pantalla con la app abierta y en zona Perú.
-   - Muestra: semáforo → calendario → "Cómo se armonizó" → septiembre de 2024 → cambiar de zona →
-     descargar CSV y abrir el reporte ejecutivo.
-   - Si no quieres hablar de corrido, lee el guion: está escrito para 3 minutos.
-3. **Escribir el texto de la propuesta** con: problema, qué construimos, cómo se armoniza,
-   qué está validado y qué no. Puedes copiar de `README.md` y `docs/metodologia.md`.
-4. **Probar la demo de punta a punta una vez más**:
-   `python -m uvicorn api.main:app --app-dir backend --port 8000` y recorrer la lista del final de
-   `docs/pitch.md`.
-5. **Capturar 2-3 imágenes** del calendario (una de Perú, una de Madre de Dios) para la propuesta.
-   Usa el botón "↓ Imagen del calendario (PNG)".
-
-## 3. Si te sobra tiempo (en este orden)
-
-1. Añadir los meses de 2026 descargándolos con tu clave (así la serie llega "hasta hoy"):
-   ```bash
-   export FIRMS_MAP_KEY=tu_clave
-   python backend/scripts/download_zone.py --recent 400
-   python backend/scripts/build_dataset.py --raw data/raw
-   ```
-   Después reinicia el servidor: la cobertura se detecta sola.
-2. Activar el envío real del boletín de Telegram (`scripts/notify_telegram.py --send`).
-3. Grabar el boletín llegando al grupo como cierre del video.
-
-## 4. Qué NO decir en la demo
-
-- No digas "tiempo real" ni "alerta temprana en vivo": es análisis histórico y la app lo dice.
-- No digas que el año más activo es indiscutible: 2005 es estimado; explica el empate técnico.
-- No digas que la armonización es perfecta: muestra el factor, su banda y la concordancia.
+No afirmar que hay viento puntual, rutas, cercanía a viviendas, prioridad por exposición o modo sin
+señal: todavía no están implementados. No afirmar que el ranking anual es definitivo ni que 2026 es
+un año completo.

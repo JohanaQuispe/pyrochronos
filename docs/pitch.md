@@ -1,118 +1,58 @@
-# Guion de la demo (3 minutos) y preguntas del jurado
+# PyroChronos: cifras y alcance para la presentación
 
-## Antes de empezar (30 s de preparación)
+> **Pendiente de revisión:** estas cifras proceden de la salida de `numeros_pitch.py` que la
+> participante ejecutó sobre sus propios archivos locales. El parquet del repositorio es otro
+> conjunto y dará resultados distintos. No presentar el orden de años como definitivo hasta resolver
+> la limitación de la armonización descrita abajo.
 
-1. Servidor arriba: `python -m uvicorn api.main:app --app-dir backend --port 8000`.
-2. Navegador en `http://localhost:8000`, ventana ancha, zoom 100 %.
-3. Zona = **Perú**, rango = **todo el historial**, vista **Mes**, medida **Celdas‑día**.
-4. Ten abierta la carpeta `docs/` por si preguntan por la metodología.
+## Datos locales informados
 
-## Guion (minuto a minuto)
+- **2 212 061 detecciones**, del 11 de noviembre de 2000 al 1 de noviembre de 2026.
+- MODIS: **579 777** detecciones; VIIRS: **1 632 284**. FRP medio: **15,93 MW**.
+- **1 706 806 celdas-día observadas**, unión de sensores sin duplicar la misma celda y día.
+  Por separado: MODIS 555 349 y VIIRS 1 234 013; no se deben sumar porque pueden coincidir.
+- Una detección es un foco de calor satelital, no necesariamente un incendio confirmado.
+  Una celda-día no es una hectárea quemada ni un incendio.
 
-**0:00 — El problema, en una frase.**
-> "Dos satélites llevan 25 años fotografiando incendios. Uno ve 1 km, el otro 375 m, así que sus
-> registros no se pueden comparar. Sin arreglar eso, nadie puede decir si un año fue peor que otro.
-> PyroChronos los armoniza en un solo calendario **para brigadas de bomberos**: saber cuándo empieza su
-> temporada, si este año viene más fuerte y dónde mirar primero."
+## Cifras calculadas por el programa (provisionales)
 
-**0:20 — El semáforo (lo primero que se ve).**
-> "Un jefe de brigada no necesita un gráfico: necesita saber si está entrando en su temporada de riesgo.
-> Hoy, en Perú, el semáforo dice 'fuera de temporada'. Si me pongo en la semana 36…"
-> *(abre «Qué hacer», cambia la fecha de referencia a una semana de septiembre)*
-> "…pasa a **ventana crítica**: la semana 36 es la de mayor actividad histórica. Y me dice qué hacer,
-> con las razones y sus límites."
+En la configuración mensual de celdas-día, el factor global de unión/MODIS fue **5,238**, con
+percentiles 25–75 **4,494–5,814**. La correlación MODIS–VIIRS fue **r = 0,979** para 176 pares
+mensuales con ambas fuentes. El factor usado cambia según el mes; correlación no implica que los
+sensores sean equivalentes ni valida por sí sola la estimación.
 
-**0:50 — El calendario (lo que se mira primero).**
-> "Cada fila es un año, cada columna un mes. En Perú la temporada es agosto–octubre, con septiembre
-> como pico. Eso lo entiende cualquier persona en menos de un minuto."
+El programa produjo un total mensual armonizado de **2 564 502 celdas-día**. Este total incluye
+estimaciones: no equivale a 2 564 502 observaciones ni a incendios. El listado mensual obtenido fue
+2026: 166 307; 2005: 155 310; 2024: 134 932; 2020: 132 140; 2022: 132 084. **2026 está
+incompleto** (hasta el 1 de noviembre); 2005 incluye estimaciones. El orden semanal calculado fue
+diferente: 2005: 157 876 y 2026: 155 699. No declarar un año ganador definitivo.
 
-**1:10 — La armonización, con números.**
-Abre "Cómo se armonizó":
-> "En los años en que ambos satélites coinciden, el conjunto ve 5,8 veces más celdas‑día que MODIS
-> solo, y sus series correlacionan 0,98: miden lo mismo a distinta escala. Por eso el historial anterior
-> a 2012 se estima con ese factor y se dibuja **rayado**, con su banda de incertidumbre. Lo estimado
-> nunca se muestra como si fuera observado."
+Según esa serie mensual calculada, agosto, septiembre y octubre representan **23,6 %, 32,3 % y
+14,2 %**, respectivamente; septiembre es el máximo. Estos porcentajes son provisionales y dependen
+ del conjunto y del método aplicado, no son un pronóstico para un año o lugar concreto.
 
-**1:30 — Anomalías.**
-> "Cada mes se compara con el mismo mes de los demás años, sin incluirse a sí mismo. Septiembre de 2024
-> quedó muy por encima: 30 400 celdas‑día frente a una mediana cercana a 12 000. El color no es lo único:
-> hay borde, símbolo y texto para lector de pantalla, y una paleta especial para daltonismo."
+### Limitación importante que revisar antes de usar el ranking o los totales
 
-**1:50 — Zona y mapa.**
-> *(cambia a **Madre de Dios**, luego dibuja un rectángulo)*
-> "El mismo análisis para otra zona, con los focos del periodo en el mapa y sus coordenadas exactas."
+En la implementación actual, cuando un periodo tiene VIIRS pero no MODIS, el programa también
+multiplica VIIRS por el factor calibrado como unión/MODIS. Ese factor no está calibrado para
+convertir VIIRS por sí solo a la unión. Puede inflar estimaciones, especialmente cuando falta MODIS.
+Hay que corregir o justificar el método, ejecutar de nuevo el cálculo con los archivos locales y
+comprobar las cifras antes de presentarlas como resultado definitivo.
 
-**2:10 — Descargas y honestidad.**
-> *(abre "Descargar ▾")* "CSV de focos, CSV de la serie armonizada, imagen del calendario y **reporte
-> ejecutivo** listo para imprimir o guardar como PDF: una hoja con el semáforo, las cifras y el método."
-> "Y aquí está lo que no sabemos: la serie termina en diciembre de 2025, los años recientes pueden
-> reprocesarse y el factor asume que la sensibilidad relativa entre satélites es estable."
+## Qué hace y qué no hace
 
-**2:30 — El aviso que llega al grupo.**
-> "El mismo cálculo se puede correr cada hora y mandar por Telegram a un grupo de brigada,
-> **solo cuando el nivel sube**. No es detección en tiempo real: los satélites ven el calor después de
-> que el fuego empezó, y el mensaje lo dice. Lo que aporta es anticipación estacional y un aviso que
-> llega en horas, no en días."
+PyroChronos está dirigido a **brigadas de bomberos**: muestra estacionalidad y anomalías históricas y
+puede preparar avisos sobre focos cargados en la capa reciente. El bot filtra focos cercanos por FRP
+respecto al historial local y solicita confirmación humana. El modo reciente depende de datos NRT
+previamente descargados; no es una consulta en vivo. El aviso nuevo y el pin aún requieren prueba
+real de extremo a extremo. El sistema no predice incendios, no confirma fuego y no sustituye una
+alerta oficial ni el criterio operativo. Viento puntual, rutas, cercanía a viviendas y modo sin señal
+no están implementados.
 
-**2:45 — Cierre.**
-> "En resumen: una persona elige su zona y entiende su temporada y sus años anormales en menos de un
-> minuto; la armonización está validada en 14 años de solape y declara su incertidumbre; y de ahí salen
-> un CSV, un reporte y un aviso para quien tiene que actuar."
+## Comprobación antes de presentar
 
-**2:55 — Para quién es (y para quién no todavía).**
-> "Está pensado para **brigadas de bomberos**: gente que necesita anticiparse a la temporada con pocos
-> recursos y confirmar en campo antes de movilizar. Guardaparques, agricultores y municipios vienen
-> después: el motor ya les serviría, pero no los hemos validado con ellos y no lo vamos a fingir."
-
-## Público objetivo en una frase
-
-Brigadas de bomberos forestales y comités de emergencia de zonas con temporada seca marcada. El
-detalle (persona, preguntas que responde, alcance y siguientes pasos) está en
-[`docs/publico-objetivo.md`](publico-objetivo.md).
-
-## Preguntas probables del jurado
-
-**¿Esto es tiempo real?**
-No, y no lo decimos. Hay dos piezas: el **calendario** (histórico, procesamiento estándar, hasta
-diciembre de 2025) y el **modo reciente** con las fuentes NRT de FIRMS (latencia típica ~3 h), que se
-activa con una clave gratuita y un comando. La demo corre con el histórico porque este entorno no tiene
-salida a internet.
-
-**¿Entonces sirve para bomberos?**
-Es exactamente para eso: **anticipar la temporada** (semáforo, ventana crítica, años anómalos) y
-**priorizar el monitoreo cerca de donde está la brigada** (el bot avisa cuando un foco intenso cae en
-su radio y pide confirmación). Para respuesta inmediata existen los servicios de FIRMS en tiempo real;
-nosotros no los duplicamos: los convertimos en calendario comparable y en aviso legible.
-
-**¿Y guardaparques, agricultores, municipios?**
-Son el siguiente alcance, en ese orden, y está escrito en `docs/publico-objetivo.md`. Hoy no están
-validados con ellos, así que no los presentamos como usuarios reales.
-
-**¿Por qué celdas‑día y no número de focos?**
-Porque VIIRS tiene 375 m y observa dos veces por noche: contar detecciones infla los años recientes.
-La celda‑día cuenta una celda una vez por día y satélite. La medida de focos está igual disponible, y la
-interfaz explica la diferencia.
-
-**¿Cómo sabemos que la armonización es correcta?**
-No lo sabemos con certeza: la validamos donde se puede. En los 14 años de solape las series
-correlacionan 0,96–0,98 y el cociente es estable mes a mes (4,1 a 7,1). Publicamos el factor, su banda
-p25–p75 y la concordancia; donde hay estimación, se marca.
-
-**¿Cuál es el año más activo?**
-2005, con ≈95 700 celdas‑día armonizadas, por delante de 2020 (84 000). 2005 es estimado, así que
-comparamos contra el extremo inferior de su banda (87 100): sigue por delante. Cuando el segundo año cae
-dentro de la banda, la tarjeta dice "empate técnico" en lugar de dar un ganador falso.
-
-**¿Cuánto de esto es IA?**
-La IA se usó como asistente de programación (declarado en `docs/ia.md`). El producto no tiene modelo de
-lenguaje: los textos se arman con plantillas sobre cifras calculadas, y el semáforo es aritmética.
-
-## Lista de comprobación antes de presentar
-
-- [ ] `/api/health` responde y el calendario carga en menos de 1 s.
-- [ ] El semáforo cambia al poner una fecha de referencia en septiembre (y vuelve con "Volver a la semana actual").
-- [ ] Los dos CSV descargan y el reporte ejecutivo se abre e imprime bien.
-- [ ] La zona dibujada funciona.
-- [ ] Modo **Semana**, medida **Focos** y paleta **Daltonismo** se ven bien.
-- [ ] Modo **Solo MODIS** muestra el factor como "no aplica" (transparencia del método).
-- [ ] Navegación solo con teclado (Tab; flechas dentro del calendario).
+- [ ] Resolver la limitación de armonización para periodos con VIIRS sin MODIS y recalcular con el parquet local.
+- [ ] Revisar calendario, zona, fechas, mapa y descarga de reportes con los datos locales.
+- [ ] Comprobar fecha y cobertura de los datos recientes antes de interpretarlos.
+- [ ] Probar aviso y pin en Telegram; no mostrar credenciales en pantalla.
+- [ ] Revisar el texto de entrega y distinguir resultados observados de estimaciones.
