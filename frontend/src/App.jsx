@@ -12,6 +12,7 @@ import MapPanel from './components/MapPanel.jsx'
 import HarmonizationPanel from './components/HarmonizationPanel.jsx'
 import BulletinCard from './components/BulletinCard.jsx'
 import FieldPanel from './components/FieldPanel.jsx'
+import FieldPanel from './components/FieldPanel.jsx'
 import { exportCalendarPng } from './lib/exportPng'
 import { fmt } from './lib/scale'
 
@@ -339,6 +340,11 @@ export default function App() {
               </p>
             </section>
           </div>
+        </div>
+
+        <div role="tabpanel" id="panel-campo" aria-labelledby="tab-campo" hidden={tab !== 'campo'} className="space-y-3">
+          <FieldPanel zone={state?.zone} zoneParams={zoneParams} />
+          {state && state.zone !== 'custom' && <BulletinCard zone={state.zone} />}
         </div>
 
         <div role="tabpanel" id="panel-campo" aria-labelledby="tab-campo" hidden={tab !== 'campo'} className="space-y-3">
