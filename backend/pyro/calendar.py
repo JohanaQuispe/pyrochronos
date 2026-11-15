@@ -296,6 +296,7 @@ def hotspots_geojson(ds: Dataset, bbox, start: date, end: date, sources: str, li
         mask &= df["source"] == 1
     elif sources == "viirs":
         mask &= df["source"] == 2
+    mask &= df["conf_level"] >= conf_min
     sub = df.loc[mask]
     total = int(len(sub))
     sampled = False

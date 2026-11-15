@@ -5,7 +5,8 @@ import { fmt } from '../lib/scale'
 
 const START_VIEW = { center: [-9.5, -75.0], zoom: 5 }
 
-export default function MapPanel({ bbox, hotspots, meta, onBBoxChange, loading, visible = true }) {
+export default function MapPanel({ bbox, hotspots, meta, onBBoxChange, loading, visible = true,
+  layer, onLayerChange, source, onSourceChange, highConfidence, onHighConfidenceChange, mapError }) {
   const mapEl = useRef(null)
   const mapRef = useRef(null)
   const rectRef = useRef(null)
@@ -86,8 +87,9 @@ export default function MapPanel({ bbox, hotspots, meta, onBBoxChange, loading, 
   // focos
   useEffect(() => {
     const group = dotsRef.current
-    if (!group || !hotspots) return
+    if (!group) return
     group.clearLayers()
+    if (!hotspots) return
     // defensa: si el navegador no puede dibujar en canvas, se sigue mostrando el mapa
     let renderer = null
     try {
@@ -106,19 +108,26 @@ export default function MapPanel({ bbox, hotspots, meta, onBBoxChange, loading, 
     for (const f of features.features) {
       const [lon, lat] = f.geometry.coordinates
       const isViirs = f.properties.source === 'VIIRS'
+      const details = document.createElement('div')
+      const description = document.createElement('p')
+      description.textContent = `Foco de calor · ${f.properties.day} (UTC) · ${f.properties.source} · confianza ${
+        ['baja', 'nominal', 'alta'][f.properties.conf] || 'no disponible'
+      } · FRP ${f.properties.frp == null ? 'no disponible' : `${f.properties.frp} MW`} · ${lat.toFixed(4)}, ${lon.toFixed(4)}`
+      const note = document.createElement('p')
+      note.textContent = 'Detección satelital, no incendio confirmado. Hora, viento y acceso no disponibles.'
+      const link = document.createElement('a')
+      link.href = `https://www.google.com/maps/search/?api=1&query=${lat},${lon}`
+      link.target = '_blank'
+      link.rel = 'noopener noreferrer'
+      link.textContent = 'Abrir coordenadas en Google Maps'
+      details.append(description, note, link)
       L.circleMarker([lat, lon], {
         renderer,
-        radius: isViirs ? 2 : 2.6,
+        radius: isViirs ? 3 : 3.5,
         color: isViirs ? '#ffd166' : '#ff6b1a',
         weight: 0,
         fillOpacity: 0.72,
-      })
-        .bindTooltip(
-          `${f.properties.day} · ${f.properties.source} · confianza ${
-            ['baja', 'nominal', 'alta'][f.properties.conf] || '—'
-          }${f.properties.frp ? ` · FRP ${f.properties.frp} MW` : ''}`,
-        )
-        .addTo(group)
+      }).bindPopup(details).addTo(group)
     }
   }
 
@@ -151,7 +160,7 @@ export default function MapPanel({ bbox, hotspots, meta, onBBoxChange, loading, 
       <div className="flex items-center justify-between gap-2 px-4 py-3">
         <div>
           <h2 id="map-title" className="text-[13px] font-medium text-white">Zona de interés</h2>
-          <p className="hint">Focos del periodo seleccionado</p>
+          <p className="hint">Toca un punto para ver sus datos y coordenadas</p>
         </div>
         <button
           type="button"
@@ -162,6 +171,33 @@ export default function MapPanel({ bbox, hotspots, meta, onBBoxChange, loading, 
           {drawing ? 'Arrastra en el mapa…' : 'Dibujar zona'}
         </button>
       </div>
+
+      <div className="flex flex-wrap items-center gap-2 px-4 pb-2 text-[11px]">
+        <label className="text-zinc-400">Capa{' '}
+          <select className="input" aria-label="Capa del mapa" value={layer} onChange={(e) => onLayerChange(e.target.value)}>
+            <option value="history">Historial seleccionado</option>
+            <option value="recent">Datos NRT cargados</option>
+          </select>
+        </label>
+        <label className="text-zinc-400">Sensor{' '}
+          <select className="input" aria-label="Sensor del mapa" value={source} onChange={(e) => onSourceChange(e.target.value)}>
+            <option value="both">MODIS y VIIRS</option>
+            <option value="viirs">Solo VIIRS</option>
+            <option value="modis">Solo MODIS</option>
+          </select>
+        </label>
+        <label className="flex items-center gap-1.5 text-zinc-400">
+          <input type="checkbox" checked={highConfidence} onChange={(e) => onHighConfidenceChange(e.target.checked)} />
+          Solo alta confianza
+        </label>
+      </div>
+      <p className="px-4 pb-2 text-[10.5px] leading-snug text-zinc-400" role="status">
+        {mapError ? `No se pudo cargar la capa: ${mapError}`
+          : layer === 'history' ? 'Historial del periodo elegido; no indica focos activos ahora.'
+            : !hotspots ? 'Consultando datos NRT guardados; no es una consulta en vivo.'
+              : !hotspots.meta.available ? 'Sin datos NRT cargados. No significa que no haya focos.'
+                : `NRT guardado · última descarga: ${hotspots.meta.fetched_at || 'desconocida'} · última detección: ${hotspots.meta.last_day || 'desconocida'}. Puede estar desactualizado; no es tiempo real.`}
+      </p>
 
       <div className="flex items-end gap-1.5 px-4 pb-3">
         {[['w', 'O'], ['s', 'S'], ['e', 'E'], ['n', 'N']].map(([key, text]) => (
@@ -206,7 +242,7 @@ export default function MapPanel({ bbox, hotspots, meta, onBBoxChange, loading, 
             ? `${fmt(hotspots.meta.shown)} de ${fmt(hotspots.meta.total)} focos${hotspots.meta.sampled ? ' (muestra)' : ''}`
             : 'Sin focos'}
         </span>
-        <span className="ml-auto">{meta?.cell_deg}° ≈ 1,1 km por celda</span>
+        <span className="ml-auto">Colores = sensor, no prioridad{meta?.cell_deg ? ` · ${meta.cell_deg}° por celda` : ''}</span>
       </div>
     </section>
   )

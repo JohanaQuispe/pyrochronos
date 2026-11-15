@@ -29,6 +29,10 @@ export default function App() {
   const [alertLoading, setAlertLoading] = useState(true)
   const [dateRef, setDateRef] = useState('')
   const [hotspots, setHotspots] = useState(null)
+  const [mapLayer, setMapLayer] = useState('history')
+  const [mapSource, setMapSource] = useState('both')
+  const [highConfidence, setHighConfidence] = useState(false)
+  const [mapError, setMapError] = useState(null)
   const [error, setError] = useState(null)
   const [loading, setLoading] = useState(true)
   const [hotLoading, setHotLoading] = useState(false)
@@ -131,17 +135,23 @@ export default function App() {
     if (!state || !activeBBox) return undefined
     const ctrl = new AbortController()
     setHotLoading(true)
-    api
-      .hotspots({ ...zoneParams, start: state.start, end: state.end, sources: state.sources }, ctrl.signal)
-      .then((g) => {
-        setHotspots(g)
+    setHotspots(null)
+    setMapError(null)
+    const common = { ...zoneParams, sources: mapSource, conf_min: highConfidence ? 2 : 0 }
+    const request = mapLayer === 'recent'
+      ? api.recentHotspots(common, ctrl.signal)
+      : api.hotspots({ ...common, start: state.start, end: state.end }, ctrl.signal)
+    request.then((g) => {
+      setHotspots(g)
+      setHotLoading(false)
+    }).catch((e) => {
+      if (e.name !== 'AbortError') {
+        setMapError(e.message)
         setHotLoading(false)
-      })
-      .catch((e) => {
-        if (e.name !== 'AbortError') setHotLoading(false)
-      })
+      }
+    })
     return () => ctrl.abort()
-  }, [state, activeBBox, zoneParams])
+  }, [state, activeBBox, zoneParams, mapLayer, mapSource, highConfidence])
 
   const onBBoxChange = useCallback((bbox) => setState((s) => ({ ...s, zone: 'custom', bbox })), [])
 
@@ -309,6 +319,13 @@ export default function App() {
               meta={data?.meta}
               onBBoxChange={onBBoxChange}
               loading={hotLoading}
+              mapError={mapError}
+              layer={mapLayer}
+              onLayerChange={setMapLayer}
+              source={mapSource}
+              onSourceChange={setMapSource}
+              highConfidence={highConfidence}
+              onHighConfidenceChange={setHighConfidence}
               visible={tab === 'mapa'}
             />
           </div>
