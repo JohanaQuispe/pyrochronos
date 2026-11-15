@@ -16,7 +16,22 @@ python backend/scripts/doctor.py
 Revisa dependencias, datos, `.env`, el bot, los focos recientes, POWER y la API, y termina con
 `SIGUIENTE PASO → …`. Nunca imprime una clave completa.
 
-## 0.b Antes de empezar (5 min)
+## 0.b Windows (PowerShell)
+
+Los comandos de esta guía funcionan igual, con tres cambios:
+
+```powershell
+cd "C:\ruta\a\pyrochronos"
+python -m pip install -r requirements.txt     # en vez de python3 -m venv ...
+python backend\scripts\doctor.py
+```
+
+- **El `.env` se carga solo** al arrancar cualquier script (no existe `set -a` en PowerShell).
+- El aviso de permisos `0o666` del `.env` es normal en Windows: allí no se gestiona con `chmod`.
+- Si el proyecto está dentro de **OneDrive**, la sincronización puede bloquear el `.parquet`
+  (archivos "solo en línea"). Si da error de lectura, copia el proyecto a `C:\pyrochronos`.
+
+## 0.c Antes de empezar (5 min)
 
 | Qué | Comando | Qué debes ver |
 |---|---|---|
@@ -104,7 +119,8 @@ cp .env.example .env
 chmod 600 .env
 ```
 
-Edita `.env` y deja exactamente esto:
+Edita `.env` y deja exactamente esto (se carga **automáticamente** al arrancar los scripts;
+no hace falta `source` ni `set -a`):
 
 ```ini
 FIRMS_MAP_KEY=tu_clave_de_firms

@@ -12,6 +12,47 @@ ROOT = Path(__file__).resolve().parents[2]
 CONFIG_PATH = Path(os.environ.get("PYRO_CONFIG", ROOT / "config.yaml"))
 
 
+def load_dotenv(path: str | Path | None = None) -> int:
+    """Carga el `.env` de la raiz en os.environ SIN pisar lo que ya existe.
+
+    Hace falta para que funcione igual en Linux (`. ./.env`), en Windows
+    (PowerShell no tiene `source`) y en el servidor. Un `.env` con `KEY=valor`,
+    comentarios con `#` y comillas opcionales. Devuelve cuantas claves anadio.
+    """
+    dotenv = Path(path) if path else ROOT / ".env"
+    if not dotenv.is_file():
+        return 0
+    added = 0
+    try:
+        lines = dotenv.read_text(encoding="utf-8", errors="replace").splitlines()
+    except OSError:
+        return 0
+    for raw in lines:
+        line = raw.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, value = line.split("=", 1)
+        key = key.strip()
+        if key.startswith("export "):
+            key = key[len("export "):].strip()
+        if key.lower().startswith(("set ", "setx ")):
+            continue
+        value = value.strip()
+        if len(value) >= 2 and value[0] == value[-1] and value[0] in "\"'":
+            value = value[1:-1]
+        if not key or not value:
+            continue
+        if key not in os.environ:
+            os.environ[key] = value
+            added += 1
+    return added
+
+
+# Al importar el paquete, el .env de la raiz queda disponible para todos
+# (scripts, API y pruebas). Las variables ya definidas en el sistema mandan.
+load_dotenv()
+
+
 def _as_date(value):
     from datetime import date
 

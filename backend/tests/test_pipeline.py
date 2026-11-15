@@ -248,3 +248,14 @@ def test_reporte_ejecutivo_es_html_con_cifras(client):
 def test_reporte_rechaza_fechas_invertidas(client):
     r = client.get("/api/report", params={"zone": "peru", "start": "2025-01-01", "end": "2010-01-01"})
     assert r.status_code == 400
+
+
+def test_redact_hides_firms_key():
+    """Un error de red no debe escupir la clave en la consola (ni en el video)."""
+    from pyro import nrt
+
+    key = "abcdef0123456789abcdef0123456789"
+    message = f"Max retries: https://firms.modaps.eosdis.nasa.gov/api/area/csv/{key}/MODIS_NRT/..."
+    assert key not in nrt.redact(message, key)
+    assert "***" in nrt.redact(message, key)
+    assert nrt.redact("sin claves", key) == "sin claves"
