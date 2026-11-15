@@ -41,6 +41,5 @@ export const api = {
   },
   geofences: (signal) => get('/api/geofences', {}, signal),
   groundtruth: (signal) => get('/api/groundtruth', {}, signal),
-  climate: (params, signal) => get('/api/climate-context', params, signal),
   csvUrl: (path, params) => `${BASE}${path}?${qs(params)}`,
 }

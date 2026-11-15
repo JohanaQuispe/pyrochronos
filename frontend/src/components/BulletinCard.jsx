@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from 'react'
 
+// El boletín es un borrador histórico opcional; copiarlo no envía mensajes.
 export default function BulletinCard({ zone }) {
   const [state, setState] = useState({ text: '', loading: false, error: null, copied: false })
 
   useEffect(() => {
     const ctrl = new AbortController()
-    setState((s) => ({ ...s, loading: true, error: null }))
+    setState({ text: '', loading: true, error: null, copied: false })
     fetch(`/api/bulletin?zone=${encodeURIComponent(zone)}`, { signal: ctrl.signal })
       .then((r) => (r.ok ? r.json() : Promise.reject(new Error(`Error ${r.status}`))))
       .then((body) => setState({ text: body.text, loading: false, error: null, copied: false }))
@@ -26,24 +27,21 @@ export default function BulletinCard({ zone }) {
   }
 
   return (
-    <details className="card p-3">
-      <summary className="cursor-pointer list-none text-sm font-semibold text-white">
-        <span className="mr-1 text-fire" aria-hidden="true">▸</span> Aviso para guardaparques (Telegram)
-      </summary>
-      <p className="mt-2 text-[11px] leading-snug text-mist">
-        Borrador de mensaje con las cifras de esta zona. Se envía con
-        <code className="mx-1 rounded bg-panelHi px-1">scripts/notify_telegram.py --send</code>
-        usando un token que vive solo en el servidor. Es un resumen histórico: no es una alerta en tiempo real.
+    <details className="card p-5">
+      <summary className="cursor-pointer text-base font-semibold text-white">Borrador de boletín histórico <span className="ml-1 text-xs font-normal text-zinc-300">· opcional</span></summary>
+      <p className="mt-3 text-[13px] leading-relaxed text-zinc-200">
+        Resume la zona seleccionada para compartirla si lo deseas. No se envía automáticamente y no es una alerta de focos recientes. Copiar el texto no lo envía a Telegram.
       </p>
-      {state.loading && <p className="mt-2 text-[11px] text-mist">Redactando…</p>}
-      {state.error && <p className="mt-2 text-[11px] text-red-300">{state.error}</p>}
+      <p className="mt-3 rounded-xl border border-amber-300/30 bg-amber-300/10 px-3 py-2 text-[12px] leading-relaxed text-amber-100">
+        Las cifras armonizadas y el ranking anual son provisionales mientras se revisa el cálculo para periodos con VIIRS sin MODIS.
+      </p>
+      {state.loading && <p className="mt-3 text-[13px] text-zinc-200">Preparando el borrador…</p>}
+      {state.error && <p role="alert" className="mt-3 text-[13px] text-red-200">{state.error}</p>}
       {state.text && (
         <>
-          <pre className="mt-2 max-h-56 overflow-auto whitespace-pre-wrap rounded-lg border border-line bg-panelHi/60 p-2 text-[11px] leading-relaxed text-slate-200">
-            {state.text}
-          </pre>
-          <button type="button" className="btn mt-2 px-2 py-1 text-[11px]" onClick={copy}>
-            {state.copied ? '¡Copiado!' : 'Copiar mensaje'}
+          <pre className="mt-3 max-h-64 overflow-auto whitespace-pre-wrap rounded-xl border border-slate-300 bg-slate-50 p-4 text-[12px] leading-relaxed text-slate-800">{state.text}</pre>
+          <button type="button" className="btn btn-primary mt-3" onClick={copy}>
+            {state.copied ? '¡Copiado!' : 'Copiar borrador'}
           </button>
         </>
       )}

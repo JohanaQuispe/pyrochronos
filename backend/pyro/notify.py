@@ -32,6 +32,7 @@ def build_bulletin(cfg: Config, ds: Dataset, zone_key: str | None = None, years_
     cal = payload["calendar"]
     lines = [f"*PyroChronos · {payload['meta']['zone']}*"]
     lines.append(f"Datos NASA FIRMS hasta {payload['meta']['coverage']['end']} (histórico, no tiempo real).")
+    lines.append("Cifras armonizadas provisionales: el cálculo para periodos con VIIRS sin MODIS está en revisión. No usar el ranking anual como definitivo.")
 
     if cards.get("season"):
         season = cards["season"]

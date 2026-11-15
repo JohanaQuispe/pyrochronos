@@ -4,11 +4,11 @@ export default {
   theme: {
     extend: {
       colors: {
-        // Base neutra tipo zinc, sin azules: menos ruido, más foco en el dato.
-        ink: '#09090b',
-        panel: '#0e0e11',
-        panelHi: '#16161a',
-        line: '#27272a',
+        // Superficies de pizarra más claras para diferenciar secciones y controles.
+        ink: '#1b2939',
+        panel: '#233449',
+        panelHi: '#30445b',
+        line: '#50657a',
         // El fuego es el único color con permiso para llamar la atención.
         fire: '#f97316',
         ember: '#fbbf24',
