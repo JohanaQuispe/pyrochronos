@@ -9,6 +9,7 @@ const dom = new JSDOM('<!doctype html><html><body><div id="root"></div></body></
 })
 global.window = dom.window
 global.document = dom.window.document
+global.localStorage = dom.window.localStorage
 Object.defineProperty(global, 'navigator', { value: dom.window.navigator, configurable: true })
 global.HTMLElement = dom.window.HTMLElement
 global.SVGElement = dom.window.SVGElement
@@ -127,6 +128,25 @@ zoneSelect.value = 'd_15'
 zoneSelect.dispatchEvent(new dom.window.Event('change', { bubbles: true }))
 await new Promise((r) => setTimeout(r, 150))
 checks.push(['selección departamental', urls.some((url) => url.includes('/api/calendar') && url.includes('zone=d_15')) && urls.some((url) => url.includes('/api/departments/d_15'))])
+const language = root.querySelector('[aria-label="Idioma / Language"]')
+language.value = 'en'
+language.dispatchEvent(new dom.window.Event('change', { bubbles: true }))
+await new Promise((r) => setTimeout(r, 150))
+checks.push(['interfaz en inglés', root.textContent.includes('Monitoring') && root.textContent.includes('Activity calendar') && root.textContent.includes('Explore detections') && root.textContent.includes('Field status')])
+checks.push(['idioma y selección conservados', document.documentElement.lang === 'en' && localStorage.getItem('pyrochronos-language') === 'en' && root.querySelector('#zone-select').value === 'd_15'])
+checks.push(['límites de traducción indicados', root.textContent.includes('server-generated descriptions') && root.textContent.includes('replies in Spanish')])
+root.querySelector('#tab-calendario').click()
+await new Promise((r) => setTimeout(r, 100))
+checks.push(['advertencia provisional en inglés', root.textContent.includes('Harmonized results are provisional.')])
+const filterButton = [...root.querySelectorAll('button')].find((button) => button.textContent.includes('Filters'))
+filterButton.click()
+await new Promise((r) => setTimeout(r, 100))
+checks.push(['filtros en inglés', root.textContent.includes('Advanced filters') && root.textContent.includes('Colorblind')])
+root.querySelector('[aria-label="Close"]').click()
+language.value = 'es'
+language.dispatchEvent(new dom.window.Event('change', { bubbles: true }))
+await new Promise((r) => setTimeout(r, 150))
+checks.push(['vuelve al español', document.documentElement.lang === 'es' && localStorage.getItem('pyrochronos-language') === 'es' && root.textContent.includes('Calendario de actividad')])
 let failed = 0
 for (const [name, ok] of checks) {
   console.log(`${ok ? 'ok  ' : 'FALLO'} ${name}`)

@@ -11,7 +11,7 @@ body {
   font-family: Inter, Geist, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
   font-feature-settings: 'cv11', 'ss01';
   letter-spacing: -0.006em;
-  background-image: radial-gradient(ellipse at 14% -8%, rgba(255,121,39,.13), transparent 34rem), radial-gradient(ellipse at 90% 0%, rgba(255,209,102,.055), transparent 28rem);
+  background-image: radial-gradient(ellipse at 14% -8%, rgba(255,121,39,.17), transparent 34rem), radial-gradient(ellipse at 90% 0%, rgba(255,209,102,.09), transparent 28rem);
   background-attachment: fixed;
 }
 button, input, select { font: inherit; }
@@ -36,20 +36,20 @@ button, input, select { font: inherit; }
   .seg { @apply rounded-lg px-3 py-2 text-[12px] text-zinc-400 transition hover:text-white; }
   .seg-on { @apply bg-white/[0.08] text-white shadow-sm; }
   .input { @apply min-h-9 rounded-xl border border-white/20 bg-panelHi px-3 py-2 text-[12px] text-white transition hover:border-white/40 focus:border-orange-300/50; }
-  .input option, .input optgroup { background: #26364e; color: white; }
+  .input option, .input optgroup { background: #332b24; color: #fff5e8; }
 }
-/* Texto secundario cálido y legible sobre el azul noche. */
-.text-zinc-500, .text-zinc-600 { color: #ded9d0; }
-.text-zinc-400 { color: #eee9df; }
+/* Texto crema legible sobre carbón. */
+.text-zinc-500, .text-zinc-600 { color: #ded1bf; }
+.text-zinc-400 { color: #f3e7d6; }
 .hatch { background-image: repeating-linear-gradient(45deg,rgba(9,9,11,.6) 0 2px,rgba(255,255,255,.26) 2px 3px,rgba(9,9,11,.6) 3px 5px); }
-.leaflet-container { background:#0b0e14; font:inherit; filter:saturate(.8); }
+.leaflet-container { background:#17130f; font:inherit; filter:saturate(.8); }
 .leaflet-tile { filter:invert(1) hue-rotate(180deg) brightness(.82) contrast(.92) saturate(.5); }
-.leaflet-bar a { background:#161a22; color:#e4e4e7; border-color:#303744; }
-.leaflet-bar a:hover { background:#222936; }
-.leaflet-control-attribution { background:rgba(9,12,18,.78)!important; color:#87909e!important; font-size:9.5px!important; }
-.leaflet-control-attribution a { color:#c0c8d4!important; }
+.leaflet-bar a { background:#332b24; color:#fff5e8; border-color:#625343; }
+.leaflet-bar a:hover { background:#4a382a; }
+.leaflet-control-attribution { background:rgba(25,19,14,.9)!important; color:#e4d5c1!important; font-size:9.5px!important; }
+.leaflet-control-attribution a { color:#fff0dc!important; }
 ::-webkit-scrollbar { width:10px; height:10px; }
-::-webkit-scrollbar-thumb { background:#303744; border-radius:8px; }
+::-webkit-scrollbar-thumb { background:#625343; border-radius:8px; }
 ::-webkit-scrollbar-track { background:transparent; }
 @media (max-width: 640px) {
   .metric { font-size:22px; }

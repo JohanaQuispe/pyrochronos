@@ -1,15 +1,17 @@
 import React, { useCallback, useMemo, useRef, useState } from 'react'
 import { MONTHS, MONTHS_SHORT, colorOf, fmt, legendSteps } from '../lib/scale'
+import { useLanguage, monthName } from '../i18n.jsx'
 
 const LEVEL_GLYPH = { alto: '▲', extremo: '◆' }
 
 export default function CalendarHeatmap({ data, onPickYear, palette = 'fuego' }) {
+  const { lang, t } = useLanguage()
   const [tip, setTip] = useState(null)
   const gridRef = useRef(null)
   const meta = data.meta
   const cal = data.calendar
   const periods = meta.periods
-  const labels = meta.period_labels
+  const measureLabel = lang === 'en' ? (meta.measure === 'cell_days' ? 'cell-days with detections' : 'detections') : meta.measure_label
   const max = cal.max_value || 1
   const isWeek = meta.granularity === 'week'
   const cellW = isWeek ? 19 : 0
@@ -24,18 +26,18 @@ export default function CalendarHeatmap({ data, onPickYear, palette = 'fuego' })
       const value = cal.values[yi][xi]
       const year = cal.years[yi]
       const p = periods[xi]
-      const label = isWeek ? `semana ${p}` : MONTHS[p - 1]
-      if (value === null) return `${label} de ${year}: sin dato (fuera de la cobertura de los satélites)`
-      const parts = [`${label} de ${year}: ${fmt(value)} ${meta.measure_label}`]
-      if (cal.estimated[yi][xi]) parts.push('valor estimado; sujeto a revisión')
+      const label = isWeek ? `${t('semana', 'week')} ${p}` : monthName(MONTHS[p - 1], lang)
+      if (value === null) return `${label} ${year}: ${t('sin dato (fuera de la cobertura de los satélites)', 'no data (outside satellite coverage)')}`
+      const parts = [`${label} ${year}: ${fmt(value)} ${measureLabel}`]
+      if (cal.estimated[yi][xi]) parts.push(t('valor estimado; sujeto a revisión', 'estimated value; under review'))
       if (cal.levels[yi][xi]) {
         parts.push(
-          `percentil ${cal.anomaly_pct[yi][xi]} (${cal.levels[yi][xi] === 'extremo' ? 'muy por encima de lo normal' : cal.levels[yi][xi] === 'alto' ? 'por encima de lo normal' : 'dentro de lo normal'})`,
+          `${t('percentil', 'percentile')} ${cal.anomaly_pct[yi][xi]} (${cal.levels[yi][xi] === 'extremo' ? t('muy por encima de lo normal', 'well above normal') : cal.levels[yi][xi] === 'alto' ? t('por encima de lo normal', 'above normal') : t('dentro de lo normal', 'within normal range')})`,
         )
       }
       return parts.join(' · ')
     },
-    [cal, isWeek, periods, meta.measure_label],
+    [cal, isWeek, periods, measureLabel, lang],
   )
 
   const onKeyDown = (event) => {
@@ -68,27 +70,27 @@ export default function CalendarHeatmap({ data, onPickYear, palette = 'fuego' })
       <div className="mb-2 flex flex-wrap items-end justify-between gap-2">
         <div>
           <h2 id="cal-title" className="text-sm font-semibold text-white">
-            Calendario de actividad
+            {t('Calendario de actividad', 'Activity calendar')}
           </h2>
           <p className="text-[11px] text-mist">
-            Filas: años · Columnas: {isWeek ? 'semanas del año (1–53)' : 'meses'} · Color: {meta.measure_label}
-            {meta.sources === 'both' ? ' armonizadas' : ` (solo ${meta.sources === 'modis' ? 'MODIS' : 'VIIRS'})`}
+            {t('Filas: años · Columnas:', 'Rows: years · Columns:')} {isWeek ? t('semanas del año (1–53)', 'weeks of the year (1–53)') : t('meses', 'months')} · {t('Color:', 'Color:')} {measureLabel}
+            {meta.sources === 'both' ? t(' armonizadas', ' harmonized') : ` (${t('solo', 'only')} ${meta.sources === 'modis' ? 'MODIS' : 'VIIRS'})`}
           </p>
         </div>
         <ul className="flex flex-wrap items-center gap-3 text-[11px] text-mist">
           <li className="flex items-center gap-1.5">
             <span className="inline-block h-3 w-3 rounded-[3px] hatch border border-line" aria-hidden="true" />
-            estimado
+            {t('estimado', 'estimated')}
           </li>
           <li className="flex items-center gap-1.5">
-            <span aria-hidden="true" className="text-[10px] text-white">▲</span> por encima de lo normal
+            <span aria-hidden="true" className="text-[10px] text-white">▲</span> {t('por encima de lo normal', 'above normal')}
           </li>
           <li className="flex items-center gap-1.5">
-            <span aria-hidden="true" className="text-[10px] text-ember">◆</span> muy por encima
+            <span aria-hidden="true" className="text-[10px] text-ember">◆</span> {t('muy por encima', 'well above normal')}
           </li>
           <li className="flex items-center gap-1.5">
             <span className="inline-block h-3 w-3 rounded-[3px] border border-dashed border-line" aria-hidden="true" />
-            sin dato
+            {t('sin dato', 'no data')}
           </li>
         </ul>
       </div>
@@ -97,7 +99,7 @@ export default function CalendarHeatmap({ data, onPickYear, palette = 'fuego' })
         <div
           ref={gridRef}
           role="grid"
-          aria-label={`Calendario de actividad por año y ${isWeek ? 'semana' : 'mes'}`}
+          aria-label={`${t('Calendario de actividad por año y', 'Activity calendar by year and')} ${isWeek ? t('semana', 'week') : t('mes', 'month')}`}
           className="grid gap-[2px]"
           style={{ gridTemplateColumns: template, minWidth: isWeek ? 44 + periods.length * 21 : 520 }}
           onKeyDown={onKeyDown}
@@ -108,9 +110,9 @@ export default function CalendarHeatmap({ data, onPickYear, palette = 'fuego' })
               key={`h-${p}`}
               role="columnheader"
               className="h-4 text-center text-[9.5px] leading-4 text-mist"
-              title={isWeek ? `Semana ${p}` : MONTHS[p - 1]}
+              title={isWeek ? `${t('Semana', 'Week')} ${p}` : monthName(MONTHS[p - 1], lang)}
             >
-              {isWeek ? (p % 4 === 1 ? p : '') : MONTHS_SHORT[p - 1]}
+              {isWeek ? (p % 4 === 1 ? p : '') : (lang === 'en' ? monthName(MONTHS[p - 1], lang).slice(0, 3) : MONTHS_SHORT[p - 1])}
             </div>
           ))}
 
@@ -123,7 +125,7 @@ export default function CalendarHeatmap({ data, onPickYear, palette = 'fuego' })
                   Number(data.chart.year) === year ? 'font-semibold text-ember' : 'text-mist hover:text-white'
                 }`}
                 onClick={() => onPickYear && onPickYear(year)}
-                title={`Ver la comparación de ${year} con su mediana`}
+                title={`${t('Ver la comparación de', 'Compare')} ${year} ${t('con su mediana', 'with its median')}`}
               >
                 {year}
               </button>
@@ -173,15 +175,15 @@ export default function CalendarHeatmap({ data, onPickYear, palette = 'fuego' })
       </div>
 
       <div className="mt-2 flex flex-wrap items-center gap-2 text-[10.5px] text-mist">
-        <span className="mr-1">Menos actividad</span>
+        <span className="mr-1">{t('Menos actividad', 'Less activity')}</span>
         {legendSteps(max, palette).map((s) => (
           <span key={s.color} className="flex items-center gap-1">
             <span className="inline-block h-3 w-4 rounded-[2px]" style={{ backgroundColor: s.color }} aria-hidden="true" />
             <span className="tabular-nums">{fmt(s.from)}–{fmt(s.to)}</span>
           </span>
         ))}
-        <span className="ml-1">Más actividad</span>
-        <span className="ml-auto text-[10px]">Escala cuadrática (raíz) para que se vean también los valores bajos.</span>
+        <span className="ml-1">{t('Más actividad', 'More activity')}</span>
+        <span className="ml-auto text-[10px]">{t('Escala cuadrática (raíz) para que se vean también los valores bajos.', 'Square-root scale to make lower values visible.')}</span>
       </div>
 
       {tip && (

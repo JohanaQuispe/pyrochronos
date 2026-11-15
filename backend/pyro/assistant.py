@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import unicodedata
+from datetime import date, datetime, timedelta, timezone
 
 from . import nrt
 from .alerts import build_alert
@@ -11,6 +12,29 @@ from .store import Dataset
 
 def _normalize(text: str) -> str:
     return ''.join(c for c in unicodedata.normalize('NFKD', text.lower()) if not unicodedata.combining(c))
+
+
+def _download_time(value, now=None):
+    """Fecha legible en hora de Perú; la frescura solo se confirma con zona horaria explícita."""
+    try:
+        stamp = datetime.fromisoformat(str(value).replace('Z', '+00:00'))
+        if stamp.tzinfo is None:
+            raise ValueError('falta zona horaria')
+        stamp = stamp.astimezone(timezone.utc)
+        local = stamp.astimezone(timezone(timedelta(hours=-5)))
+        current = now or datetime.now(timezone.utc)
+        age = current - stamp
+        fresh = timedelta(0) <= age <= timedelta(hours=6)
+        return local.strftime('%d/%m/%Y a las %H:%M') + ' (hora de Perú)', fresh
+    except (TypeError, ValueError, OverflowError):
+        return 'fecha desconocida', False
+
+
+def _utc_day(value):
+    try:
+        return date.fromisoformat(str(value)).strftime('%d/%m/%Y') + ' (fecha UTC)'
+    except (TypeError, ValueError):
+        return 'no disponible para esta zona'
 
 
 def answer_question(text: str, cfg: Config, ds: Dataset, bbox, zone_name: str, recent_selector=None) -> str:
@@ -29,20 +53,31 @@ def answer_question(text: str, cfg: Config, ds: Dataset, bbox, zone_name: str, r
     if any(word in question for word in ('foco', 'incendio', 'fuego', 'calor', 'punto', 'ocurriendo', 'pasando', 'actual', 'reciente', 'alerta', 'hay algo')):
         recent = nrt.stats(cfg, bbox, selector=recent_selector) if recent_selector else nrt.stats(cfg, bbox)
         info = recent.get('meta') or {}
-        fetched = info.get('fetched_at') or 'fecha de descarga desconocida'
         if not recent.get('available'):
-            return (f"{zone_name}: no hay datos recientes cargados. No significa que no haya focos. "
-                    "Las alertas dependen de una descarga FIRMS correcta y del bot en ejecución.")
+            return (f"📍 Zona: {zone_name}\n\n"
+                    "No hay datos recientes cargados. Esto no significa que no haya focos de calor.\n"
+                    "Comprueba que el bot esté encendido y pueda descargar datos de NASA FIRMS.")
         try:
-            w, s, e, n = info['bbox']
+            w, s, e, n = (float(x) for x in info['bbox'])
             covered = w <= bbox[0] and s <= bbox[1] and e >= bbox[2] and n >= bbox[3]
-        except (KeyError, TypeError, ValueError):
+        except (KeyError, TypeError, ValueError, OverflowError):
             covered = False
-        coverage_note = '' if covered else ' La descarga no tiene cobertura completa verificada de esta zona.'
-        proximity_note = ' No conozco tu ubicación en esta consulta y no puedo calcular cercanía.' if 'cerca' in question else ''
-        return (f"{zone_name}: {recent.get('total', 0)} detecciones en el archivo reciente guardado. "
-                f"Última descarga: {fetched}; última fecha de detección: {recent.get('last_day') or info.get('last_day') or 'desconocida'}. "
-                f"{coverage_note}{proximity_note} Puede estar desactualizado y no equivale a incendios confirmados. Verifica la fecha y confirma en campo.")
+        downloaded, fresh = _download_time(info.get('fetched_at'))
+        count = f"{int(recent.get('total') or 0):,}".replace(',', ' ')
+        days = info.get('days')
+        period = f" de los últimos {days} días solicitados" if isinstance(days, int) and not isinstance(days, bool) and 1 <= days <= 10 else ''
+        lines = [f"📍 Zona consultada: {zone_name}",
+                 f"🛰️ La última descarga guardada contiene {count} detecciones de calor en esta zona{period}.",
+                 f"📥 Descarga: {downloaded}.",
+                 f"📅 Fecha de la detección más reciente en esta zona: {_utc_day(recent.get('last_day'))}."]
+        if not covered:
+            lines.append('⚠️ No se ha comprobado que la descarga cubra toda esta zona.')
+        if not fresh:
+            lines.append('⚠️ La descarga puede estar desactualizada; comprueba la conexión y actualiza los datos.')
+        if 'cerca' in question:
+            lines.append('Esta consulta resume la zona; no calcula qué tan cerca están de tu ubicación.')
+        lines.append('Una detección de calor no confirma un incendio y no indica que siga activo. Verifica en campo y con fuentes oficiales.')
+        return '\n'.join(lines)
     if any(word in question for word in ('telegram', 'aviso', 'bot', 'notifica', 'notificacion')):
         return ('Para recibir avisos en Telegram, abre el bot, comparte tu ubicación y elige la distancia. '
                 'El bot debe estar ejecutándose y los datos FIRMS deben actualizarse. Solo avisa focos '

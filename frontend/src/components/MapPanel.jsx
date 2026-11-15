@@ -3,11 +3,13 @@ import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import { fmt } from '../lib/scale'
 import { api } from '../api'
+import { useLanguage } from '../i18n.jsx'
 
 const START_VIEW = { center: [-9.5, -75.0], zoom: 5 }
 
 export default function MapPanel({ bbox, zone, hotspots, meta, onBBoxChange, loading, visible = true,
   layer, onLayerChange, source, onSourceChange, highConfidence, onHighConfidenceChange, mapError }) {
+  const { lang, t } = useLanguage()
   const mapEl = useRef(null)
   const mapRef = useRef(null)
   const rectRef = useRef(null)
@@ -127,7 +129,7 @@ export default function MapPanel({ bbox, zone, hotspots, meta, onBBoxChange, loa
     } catch (err) {
       console.warn('No se pudieron dibujar los focos:', err)
     }
-  }, [hotspots])
+  }, [hotspots, lang])
 
   function drawDots(group, features, renderer) {
     for (const f of features.features) {
@@ -135,16 +137,16 @@ export default function MapPanel({ bbox, zone, hotspots, meta, onBBoxChange, loa
       const isViirs = f.properties.source === 'VIIRS'
       const details = document.createElement('div')
       const description = document.createElement('p')
-      description.textContent = `Foco de calor · ${f.properties.day} (UTC) · ${f.properties.source} · confianza ${
-        ['baja', 'nominal', 'alta'][f.properties.conf] || 'no disponible'
-      } · FRP ${f.properties.frp == null ? 'no disponible' : `${f.properties.frp} MW`} · ${lat.toFixed(4)}, ${lon.toFixed(4)}`
+      description.textContent = `${t('Foco de calor', 'Heat detection')} · ${f.properties.day} (UTC) · ${f.properties.source} · ${t('confianza', 'confidence')} ${
+        (lang === 'en' ? ['low', 'nominal', 'high'] : ['baja', 'nominal', 'alta'])[f.properties.conf] || t('no disponible', 'not available')
+      } · FRP ${f.properties.frp == null ? t('no disponible', 'not available') : `${f.properties.frp} MW`} · ${lat.toFixed(4)}, ${lon.toFixed(4)}`
       const note = document.createElement('p')
-      note.textContent = 'Detección satelital, no incendio confirmado. Hora, viento y acceso no disponibles.'
+      note.textContent = t('Detección satelital, no incendio confirmado. Hora, viento y acceso no disponibles.', 'Satellite detection, not a confirmed fire. Time, wind and access are not available.')
       const link = document.createElement('a')
       link.href = `https://www.google.com/maps/search/?api=1&query=${lat},${lon}`
       link.target = '_blank'
       link.rel = 'noopener noreferrer'
-      link.textContent = 'Abrir coordenadas en Google Maps'
+      link.textContent = t('Abrir coordenadas en Google Maps', 'Open coordinates in Google Maps')
       details.append(description, note, link)
       L.circleMarker([lat, lon], {
         renderer,
@@ -171,7 +173,7 @@ export default function MapPanel({ bbox, zone, hotspots, meta, onBBoxChange, loa
     const e = Number(coords.e)
     const n = Number(coords.n)
     if ([w, s, e, n].some((v) => Number.isNaN(v)) || w >= e || s >= n) {
-      alert('Las coordenadas no son válidas: se espera oeste < este y sur < norte.')
+      alert(t('Las coordenadas no son válidas: se espera oeste < este y sur < norte.', 'Invalid coordinates: west must be less than east and south less than north.'))
       return
     }
     onBBoxChange([w, s, e, n])
@@ -184,8 +186,8 @@ export default function MapPanel({ bbox, zone, hotspots, meta, onBBoxChange, loa
     >
       <div className="flex items-center justify-between gap-2 px-4 py-3">
         <div>
-          <h2 id="map-title" className="text-[16px] font-semibold text-white">Explorar detecciones</h2>
-          <p className="hint">Toca un punto para ver sus datos y coordenadas</p>
+          <h2 id="map-title" className="text-[16px] font-semibold text-white">{t('Explorar detecciones', 'Explore detections')}</h2>
+          <p className="hint">{t('Toca un punto para ver sus datos y coordenadas', 'Select a point to see its details and coordinates')}</p>
         </div>
         <button
           type="button"
@@ -193,65 +195,65 @@ export default function MapPanel({ bbox, zone, hotspots, meta, onBBoxChange, loa
           onClick={() => setDrawing((d) => !d)}
           aria-pressed={drawing}
         >
-          {drawing ? 'Arrastra en el mapa…' : 'Dibujar zona'}
+          {drawing ? t('Arrastra en el mapa…', 'Drag on the map…') : t('Dibujar zona', 'Draw area')}
         </button>
       </div>
 
       <div className="flex flex-wrap items-center gap-2 px-4 pb-2 text-[11px]">
-        <label className="text-zinc-400">Capa{' '}
-          <select className="input" aria-label="Capa del mapa" value={layer} onChange={(e) => onLayerChange(e.target.value)}>
-            <option value="history">Historial seleccionado</option>
-            <option value="recent">Datos NRT cargados</option>
+        <label className="text-zinc-400">{t('Capa', 'Layer')}{' '}
+          <select className="input" aria-label={t('Capa del mapa', 'Map layer')} value={layer} onChange={(e) => onLayerChange(e.target.value)}>
+            <option value="history">{t('Historial seleccionado', 'Selected history')}</option>
+            <option value="recent">{t('Datos NRT cargados', 'Loaded NRT data')}</option>
           </select>
         </label>
         <label className="text-zinc-400">Sensor{' '}
-          <select className="input" aria-label="Sensor del mapa" value={source} onChange={(e) => onSourceChange(e.target.value)}>
-            <option value="both">MODIS y VIIRS</option>
-            <option value="viirs">Solo VIIRS</option>
-            <option value="modis">Solo MODIS</option>
+          <select className="input" aria-label={t('Sensor del mapa', 'Map sensor')} value={source} onChange={(e) => onSourceChange(e.target.value)}>
+            <option value="both">{t('MODIS y VIIRS', 'MODIS and VIIRS')}</option>
+            <option value="viirs">{t('Solo VIIRS', 'VIIRS only')}</option>
+            <option value="modis">{t('Solo MODIS', 'MODIS only')}</option>
           </select>
         </label>
         <label className="flex items-center gap-1.5 text-zinc-400">
           <input type="checkbox" checked={highConfidence} onChange={(e) => onHighConfidenceChange(e.target.checked)} />
-          Solo alta confianza
+          {t('Solo alta confianza', 'High confidence only')}
         </label>
       </div>
       <p className="px-4 pb-2 text-[10.5px] leading-snug text-zinc-400" role="status">
-        {mapError ? `No se pudo cargar la capa: ${mapError}`
-          : layer === 'history' ? 'Historial del periodo elegido; no indica focos activos ahora.'
-            : !hotspots ? 'Consultando datos NRT guardados; no es una consulta en vivo.'
-              : !hotspots.meta.available ? 'Sin datos NRT cargados. No significa que no haya focos.'
-                : `NRT guardado · última descarga: ${hotspots.meta.fetched_at || 'desconocida'} · última detección: ${hotspots.meta.last_day || 'desconocida'}. ${fullCoverage ? '' : 'Cobertura completa de la zona no verificada. '}Puede estar desactualizado; no es tiempo real.`}
+        {mapError ? `${t('No se pudo cargar la capa', 'Could not load layer')}: ${mapError}`
+          : layer === 'history' ? t('Historial del periodo elegido; no indica focos activos ahora.', 'Historical data for the selected period; it does not show current active fires.')
+            : !hotspots ? t('Consultando datos NRT guardados; no es una consulta en vivo.', 'Loading stored NRT data; this is not a live query.')
+              : !hotspots.meta.available ? t('Sin datos NRT cargados. No significa que no haya focos.', 'No NRT data loaded. This does not mean there are no hotspots.')
+                : `${t('NRT guardado · última descarga', 'Stored NRT · last download')}: ${hotspots.meta.fetched_at || t('desconocida', 'unknown')} · ${t('última detección', 'last detection')}: ${hotspots.meta.last_day || t('desconocida', 'unknown')}. ${fullCoverage ? '' : t('Cobertura completa de la zona no verificada. ', 'Full area coverage not verified. ')}${t('Puede estar desactualizado; no es tiempo real.', 'May be outdated; not real time.')}`}
       </p>
 
-      {zone?.startsWith('d_') && <p className="px-4 pb-2 text-[10.5px] text-zinc-400">{boundaryError ? 'No se pudo cargar el contorno.' : 'Contorno departamental simplificado (INEI 2007); puede diferir del límite oficial actual.'}</p>}
+      {zone?.startsWith('d_') && <p className="px-4 pb-2 text-[10.5px] text-zinc-400">{boundaryError ? t('No se pudo cargar el contorno.', 'Could not load the boundary.') : t('Contorno departamental simplificado (INEI 2007); puede diferir del límite oficial actual.', 'Simplified department boundary (INEI 2007); it may differ from the current official boundary.')}</p>}
       <div className="flex items-end gap-1.5 px-4 pb-3">
-        {[['w', 'O'], ['s', 'S'], ['e', 'E'], ['n', 'N']].map(([key, text]) => (
+        {[['w', t('O', 'W')], ['s', 'S'], ['e', 'E'], ['n', 'N']].map(([key, text]) => (
           <label key={key} className="flex-1 text-[9.5px] text-mist">
             <span className="sr-only">
-              {key === 'w' ? 'Oeste' : key === 's' ? 'Sur' : key === 'e' ? 'Este' : 'Norte'}
+              {key === 'w' ? t('Oeste', 'West') : key === 's' ? t('Sur', 'South') : key === 'e' ? t('Este', 'East') : t('Norte', 'North')}
             </span>
             <span aria-hidden="true" className="mb-0.5 block">{text}</span>
             <input
               type="number"
               step="0.01"
-              aria-label={key === 'w' ? 'Oeste' : key === 's' ? 'Sur' : key === 'e' ? 'Este' : 'Norte'}
+              aria-label={key === 'w' ? t('Oeste', 'West') : key === 's' ? t('Sur', 'South') : key === 'e' ? t('Este', 'East') : t('Norte', 'North')}
               className="input w-full px-1 py-0.5 text-[10.5px] tabular-nums"
               value={coords[key]}
               onChange={(e) => setCoords((c) => ({ ...c, [key]: e.target.value }))}
             />
           </label>
         ))}
-        <button type="button" className="btn shrink-0 px-2 py-1 text-[10.5px]" onClick={applyCoords} title="Aplicar coordenadas">
-          Aplicar
+        <button type="button" className="btn shrink-0 px-2 py-1 text-[10.5px]" onClick={applyCoords} title={t('Aplicar coordenadas', 'Apply coordinates')}>
+          {t('Aplicar', 'Apply')}
         </button>
       </div>
 
       <div className="relative flex-1">
-        <div ref={mapEl} className="absolute inset-0" role="application" aria-label="Mapa con los focos de calor del periodo" />
+        <div ref={mapEl} className="absolute inset-0" role="application" aria-label={t('Mapa con los focos de calor del periodo', 'Map of heat detections in the period')} />
         {loading && (
           <div className="absolute inset-0 z-[400] grid place-items-center bg-ink/50 text-[12px] text-zinc-400 backdrop-blur-[1px]">
-            Cargando focos…
+            {t('Cargando focos…', 'Loading hotspots…')}
           </div>
         )}
       </div>
@@ -265,10 +267,10 @@ export default function MapPanel({ bbox, zone, hotspots, meta, onBBoxChange, loa
         </span>
         <span>
           {hotspots
-            ? `${fmt(hotspots.meta.shown)} de ${fmt(hotspots.meta.total)} focos${hotspots.meta.sampled ? ' (muestra)' : ''}`
-            : 'Sin focos'}
+            ? `${fmt(hotspots.meta.shown)} ${t('de', 'of')} ${fmt(hotspots.meta.total)} ${t('focos', 'hotspots')}${hotspots.meta.sampled ? t(' (muestra)', ' (sample)') : ''}`
+            : t('Sin focos', 'No hotspots')}
         </span>
-        <span className="ml-auto">Colores = sensor, no prioridad{meta?.cell_deg ? ` · ${meta.cell_deg}° por celda` : ''}</span>
+        <span className="ml-auto">{t('Colores = sensor, no prioridad', 'Colors = sensor, not priority')}{meta?.cell_deg ? ` · ${meta.cell_deg}° ${t('por celda', 'per cell')}` : ''}</span>
       </div>
     </section>
   )
