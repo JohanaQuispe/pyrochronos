@@ -262,8 +262,8 @@ def cmd_write_env(token: str | None, chat_id: str | None, path: Path) -> int:
     print(f"Guardado en {path} (permisos 600, fuera de git por .gitignore).")
     print(f"  TELEGRAM_BOT_TOKEN={mask_token(saved.get('TELEGRAM_BOT_TOKEN'))}")
     print(f"  TELEGRAM_CHAT_ID={saved.get('TELEGRAM_CHAT_ID') or '(vacio: falta --chat-id)'}")
-    print("\nAviso: el .env no se carga solo. Exportalo antes de usar los scripts:")
-    print('  set -a && . ./.env && set +a')
+    print("\nAviso: los scripts cargan .env automaticamente al arrancar (pyro.config).")
+    print("Si prefieres exportarlo a mano:  Linux/macOS: set -a && . ./.env && set +a")
     return 0 if saved.get("TELEGRAM_CHAT_ID") else 0
 
 

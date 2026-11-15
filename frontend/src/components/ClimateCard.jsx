@@ -1,11 +1,11 @@
 import React, { useEffect, useState } from 'react'
 import { api } from '../api.js'
 
-const LEVEL_STYLE = {
-  seco: { chip: 'border-ember/60 bg-fire/20 text-ember', icon: '☀️' },
-  humedo: { chip: 'border-sky-400/50 bg-sky-400/10 text-sky-200', icon: '🌧️' },
-  normal: { chip: 'border-emerald-400/50 bg-emerald-400/10 text-emerald-200', icon: '🌿' },
-  sin_datos: { chip: 'border-line bg-white/5 text-mist', icon: '·' },
+const LEVEL = {
+  seco: { text: 'text-amber-200', dot: 'bg-amber-400' },
+  humedo: { text: 'text-sky-300', dot: 'bg-sky-400' },
+  normal: { text: 'text-emerald-300', dot: 'bg-emerald-500' },
+  sin_datos: { text: 'text-zinc-400', dot: 'bg-zinc-600' },
 }
 
 function num(value, digits = 0, suffix = '') {
@@ -14,13 +14,12 @@ function num(value, digits = 0, suffix = '') {
 }
 
 /**
- * Contexto meteorológico de los últimos 30 días (NASA POWER, precargado).
- * Si no hay archivo de caché, lo dice con el comando exacto para generarlo.
+ * Contexto de los últimos 30 días (NASA POWER precargado).
+ * Si no hay datos, se dice en una línea, sin comandos ni bloques de código.
  */
 export default function ClimateCard({ zone }) {
   const [data, setData] = useState(null)
   const [error, setError] = useState(null)
-  const [loading, setLoading] = useState(false)
 
   useEffect(() => {
     if (!zone || zone === 'custom') {
@@ -28,95 +27,88 @@ export default function ClimateCard({ zone }) {
       return undefined
     }
     const ctrl = new AbortController()
-    setLoading(true)
     setError(null)
     api
       .climate({ zone }, ctrl.signal)
-      .then((d) => {
-        setData(d)
-        setLoading(false)
-      })
+      .then(setData)
       .catch((e) => {
-        if (e.name !== 'AbortError') {
-          setError(e.message)
-          setLoading(false)
-        }
+        if (e.name !== 'AbortError') setError(e.message)
       })
     return () => ctrl.abort()
   }, [zone])
 
-  if (loading) {
-    return (
-      <section className="card p-3" aria-busy="true">
-        <h2 className="text-sm font-semibold text-white">Contexto climático</h2>
-        <p className="mt-1 text-[11.5px] text-mist">Consultando NASA POWER…</p>
-      </section>
-    )
-  }
-
   if (error) {
     return (
-      <section className="card p-3" role="alert">
-        <h2 className="text-sm font-semibold text-white">Contexto climático</h2>
-        <p className="mt-1 text-[11.5px] text-ember">No se pudo cargar: {error}</p>
+      <section className="card p-4" role="alert">
+        <p className="label">Contexto climático</p>
+        <p className="mt-1 text-[12px] text-amber-200">No disponible: {error}</p>
       </section>
     )
   }
 
-  if (!data || data.available === false) {
+  if (!data) {
     return (
-      <section className="card p-3">
-        <h2 className="text-sm font-semibold text-white">Contexto climático (NASA POWER)</h2>
-        <p className="mt-1 text-[11.5px] leading-relaxed text-slate-200">
-          Sin datos cargados para esta zona. El calendario funciona igual: esto solo añade el estado del
-          combustible (lluvia y temperatura de los últimos 30 días).
-        </p>
-        <code className="mt-1.5 block rounded bg-black/40 px-2 py-1 text-[10.5px] text-mist">
-          {data?.how_to || 'python backend/scripts/download_power.py --zone madrededios --years 5'}
-        </code>
+      <section className="card p-4" aria-busy="true">
+        <p className="label">Contexto climático</p>
+        <div className="mt-3 h-3 w-2/3 animate-pulse rounded bg-white/[0.06]" />
       </section>
     )
   }
 
-  const style = LEVEL_STYLE[data.level] || LEVEL_STYLE.sin_datos
+  if (data.available === false) {
+    return (
+      <section className="card p-4">
+        <div className="flex items-center justify-between gap-2">
+          <p className="label">Contexto climático</p>
+          <span className="chip">sin datos</span>
+        </div>
+        <p className="mt-2 text-[12.5px] leading-relaxed text-zinc-400">
+          Falta precargar NASA POWER para esta zona. El calendario y el semáforo funcionan igual: esto solo añade
+          el estado del combustible (lluvia y temperatura de los últimos 30 días).
+        </p>
+      </section>
+    )
+  }
+
+  const style = LEVEL[data.level] || LEVEL.sin_datos
   const deficit = data.rain_deficit_pct
-  const sign = deficit === null || deficit === undefined ? '' : deficit > 0 ? '+' : ''
+  const sign = deficit === null || deficit === undefined || deficit <= 0 ? '' : '+'
 
   return (
-    <section className="card p-3" aria-labelledby="climate-title">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <h2 id="climate-title" className="text-sm font-semibold text-white">
-          Contexto climático · últimos 30 días
-        </h2>
-        <span className={`rounded-full border px-2 py-0.5 text-[10.5px] font-medium ${style.chip}`}>
-          <span aria-hidden="true">{style.icon} </span>
+    <section className="card p-4" aria-labelledby="climate-title">
+      <div className="flex items-center justify-between gap-2">
+        <p id="climate-title" className="label">Contexto climático · 30 días</p>
+        <span className={`flex items-center gap-1.5 text-[12px] ${style.text}`}>
+          <span className={`h-1.5 w-1.5 rounded-full ${style.dot}`} aria-hidden="true" />
           {data.label}
         </span>
       </div>
-      <dl className="mt-2 grid grid-cols-3 gap-2 text-center">
-        <div className="rounded border border-line bg-black/20 px-1.5 py-1">
-          <dt className="text-[10px] uppercase tracking-wide text-mist">Lluvia</dt>
-          <dd className="text-[13px] font-semibold text-white">{num(data.window?.rain_mm, 0, ' mm')}</dd>
-          <dd className="text-[10px] text-mist">
+
+      <dl className="mt-3 grid grid-cols-3 gap-3">
+        <div>
+          <dt className="text-[10.5px] uppercase tracking-wider text-zinc-500">Lluvia</dt>
+          <dd className="mt-1 text-[15px] font-medium text-white">{num(data.window?.rain_mm, 0, ' mm')}</dd>
+          <dd className="text-[10.5px] text-zinc-500">
             {deficit === null || deficit === undefined ? 'sin comparación' : `${sign}${num(deficit, 0, ' %')} vs. años previos`}
           </dd>
         </div>
-        <div className="rounded border border-line bg-black/20 px-1.5 py-1">
-          <dt className="text-[10px] uppercase tracking-wide text-mist">T máx</dt>
-          <dd className="text-[13px] font-semibold text-white">{num(data.window?.tmax_mean_c, 1, ' °C')}</dd>
-          <dd className="text-[10px] text-mist">
+        <div>
+          <dt className="text-[10.5px] uppercase tracking-wider text-zinc-500">T máx</dt>
+          <dd className="mt-1 text-[15px] font-medium text-white">{num(data.window?.tmax_mean_c, 1, ' °C')}</dd>
+          <dd className="text-[10.5px] text-zinc-500">
             {data.tmax_anomaly_c === null || data.tmax_anomaly_c === undefined
               ? 'sin comparación'
               : `${data.tmax_anomaly_c > 0 ? '+' : ''}${num(data.tmax_anomaly_c, 1, ' °C')} de anomalía`}
           </dd>
         </div>
-        <div className="rounded border border-line bg-black/20 px-1.5 py-1">
-          <dt className="text-[10px] uppercase tracking-wide text-mist">Días secos</dt>
-          <dd className="text-[13px] font-semibold text-white">{num(data.window?.dry_days, 0)}</dd>
-          <dd className="text-[10px] text-mist">de {num(data.window?.days, 0)} con datos</dd>
+        <div>
+          <dt className="text-[10.5px] uppercase tracking-wider text-zinc-500">Días secos</dt>
+          <dd className="mt-1 text-[15px] font-medium text-white">{num(data.window?.dry_days, 0)}</dd>
+          <dd className="text-[10.5px] text-zinc-500">de {num(data.window?.days, 0)}</dd>
         </div>
       </dl>
-      <p className="mt-1.5 text-[10.5px] leading-snug text-mist">
+
+      <p className="mt-3 text-[10.5px] leading-snug text-zinc-600">
         {data.note} Comparado con {data.history_years} año(s). Fuente: {data.source}.
       </p>
     </section>

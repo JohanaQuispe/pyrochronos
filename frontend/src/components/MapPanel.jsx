@@ -5,7 +5,7 @@ import { fmt } from '../lib/scale'
 
 const START_VIEW = { center: [-9.5, -75.0], zoom: 5 }
 
-export default function MapPanel({ bbox, hotspots, meta, onBBoxChange, loading }) {
+export default function MapPanel({ bbox, hotspots, meta, onBBoxChange, loading, visible = true }) {
   const mapEl = useRef(null)
   const mapRef = useRef(null)
   const rectRef = useRef(null)
@@ -60,6 +60,15 @@ export default function MapPanel({ bbox, hotspots, meta, onBBoxChange, loading }
       mapRef.current = null
     }
   }, [onBBoxChange])
+
+  // al volver a esta pestaña, Leaflet debe recalcular su tamaño
+  useEffect(() => {
+    if (!visible) return undefined
+    const map = mapRef.current
+    if (!map) return undefined
+    const id = setTimeout(() => map.invalidateSize(), 80)
+    return () => clearTimeout(id)
+  }, [visible])
 
   // rectangulo de la zona activa
   useEffect(() => {
@@ -135,12 +144,18 @@ export default function MapPanel({ bbox, hotspots, meta, onBBoxChange, loading }
   }
 
   return (
-    <section className="card flex h-full min-h-[380px] flex-col overflow-hidden" aria-labelledby="map-title">
-      <div className="flex items-center justify-between gap-2 px-3 pt-2">
-        <h2 id="map-title" className="text-sm font-semibold text-white">Zona de interés</h2>
+    <section
+      className="flex h-full min-h-[420px] flex-col overflow-hidden rounded-2xl border border-white/[0.06] bg-white/[0.015]"
+      aria-labelledby="map-title"
+    >
+      <div className="flex items-center justify-between gap-2 px-4 py-3">
+        <div>
+          <h2 id="map-title" className="text-[13px] font-medium text-white">Zona de interés</h2>
+          <p className="hint">Focos del periodo seleccionado</p>
+        </div>
         <button
           type="button"
-          className={`btn px-2 py-1 text-xs ${drawing ? 'btn-primary' : ''}`}
+          className={`btn text-[12px] ${drawing ? 'btn-primary' : ''}`}
           onClick={() => setDrawing((d) => !d)}
           aria-pressed={drawing}
         >
@@ -148,7 +163,7 @@ export default function MapPanel({ bbox, hotspots, meta, onBBoxChange, loading }
         </button>
       </div>
 
-      <div className="flex items-end gap-1 px-3 pb-2">
+      <div className="flex items-end gap-1.5 px-4 pb-3">
         {[['w', 'O'], ['s', 'S'], ['e', 'E'], ['n', 'N']].map(([key, text]) => (
           <label key={key} className="flex-1 text-[9.5px] text-mist">
             <span className="sr-only">
@@ -159,13 +174,13 @@ export default function MapPanel({ bbox, hotspots, meta, onBBoxChange, loading }
               type="number"
               step="0.01"
               aria-label={key === 'w' ? 'Oeste' : key === 's' ? 'Sur' : key === 'e' ? 'Este' : 'Norte'}
-              className="w-full rounded border border-line bg-panelHi px-1 py-0.5 text-[10.5px] tabular-nums text-slate-100"
+              className="input w-full px-1 py-0.5 text-[10.5px] tabular-nums"
               value={coords[key]}
               onChange={(e) => setCoords((c) => ({ ...c, [key]: e.target.value }))}
             />
           </label>
         ))}
-        <button type="button" className="btn shrink-0 px-1.5 py-1 text-[10.5px]" onClick={applyCoords} title="Aplicar coordenadas">
+        <button type="button" className="btn shrink-0 px-2 py-1 text-[10.5px]" onClick={applyCoords} title="Aplicar coordenadas">
           Aplicar
         </button>
       </div>
@@ -173,13 +188,13 @@ export default function MapPanel({ bbox, hotspots, meta, onBBoxChange, loading }
       <div className="relative flex-1">
         <div ref={mapEl} className="absolute inset-0" role="application" aria-label="Mapa con los focos de calor del periodo" />
         {loading && (
-          <div className="absolute inset-0 z-[400] grid place-items-center bg-ink/60 text-sm text-mist">
+          <div className="absolute inset-0 z-[400] grid place-items-center bg-ink/50 text-[12px] text-zinc-400 backdrop-blur-[1px]">
             Cargando focos…
           </div>
         )}
       </div>
 
-      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 border-t border-line px-3 py-1.5 text-[10.5px] text-mist">
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 border-t border-white/[0.06] px-4 py-2 text-[10.5px] text-zinc-500">
         <span className="flex items-center gap-1">
           <span className="inline-block h-2 w-2 rounded-full bg-[#ff6b1a]" aria-hidden="true" /> MODIS
         </span>

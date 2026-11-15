@@ -26,6 +26,14 @@ MAX_DAYS_PER_QUERY = 5
 NRT_SOURCES = ("VIIRS_SNPP_NRT", "VIIRS_NOAA20_NRT", "MODIS_NRT")
 
 
+def redact(text: str, key: str | None = None) -> str:
+    """Quita la clave del texto antes de imprimirlo (nunca en consola ni en el video)."""
+    secret = key or env("FIRMS_MAP_KEY")
+    if secret and secret in text:
+        text = text.replace(secret, "***")
+    return text
+
+
 def recent_path(cfg: Config) -> Path:
     return cfg.data_file.parent / "recent.parquet"
 
@@ -70,10 +78,10 @@ def fetch_recent(
             try:
                 resp = requests.get(url, timeout=120)
             except Exception as exc:
-                print(f"  aviso: {source} {cursor} -> {exc}")
+                print(f"  aviso: {source} {cursor} -> {redact(str(exc), key)}")
                 break
             if resp.status_code != 200 or "Invalid MAP_KEY" in resp.text[:200]:
-                print(f"  aviso: {source} {cursor} -> HTTP {resp.status_code} {resp.text[:120]}")
+                print(f"  aviso: {source} {cursor} -> HTTP {resp.status_code} {redact(resp.text[:120], key)}")
                 break
             text = resp.text.strip()
             if not text or len(text.splitlines()) <= 1:

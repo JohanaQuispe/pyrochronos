@@ -21,6 +21,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 OK, WARN, BAD = "✅", "⚠️ ", "❌"
+WINDOWS = os.name == "nt"
+VENV_HINT = ("python -m venv .venv && .venv\\Scripts\\pip install -r requirements.txt" if WINDOWS
+             else "python3 -m venv .venv && .venv/bin/pip install -r requirements.txt")
 results: list[tuple[str, str]] = []
 
 
@@ -37,7 +40,7 @@ def check_deps() -> None:
             missing.append(mod)
     if missing:
         add(BAD, f"faltan dependencias: {', '.join(missing)}",
-            "python3 -m venv .venv && .venv/bin/pip install -r requirements.txt")
+            f"python -m pip install -r requirements.txt   (o, en un entorno nuevo: {VENV_HINT})")
     else:
         add(OK, "dependencias de Python instaladas")
 
@@ -65,10 +68,12 @@ def check_env() -> dict:
     values: dict[str, str] = {}
     if not env_path.exists():
         add(WARN, "no hay .env en la raíz del proyecto",
-            "cp .env.example .env && chmod 600 .env")
+            ("copy .env.example .env" if WINDOWS else "cp .env.example .env && chmod 600 .env"))
     else:
         mode = stat.S_IMODE(os.stat(env_path).st_mode)
-        if mode & 0o077:
+        if WINDOWS:
+            add(OK, ".env encontrado (en Windows los permisos no se gestionan con chmod)")
+        elif mode & 0o077:
             add(WARN, f".env con permisos {oct(mode)} (lo pueden leer otros usuarios)",
                 "chmod 600 .env")
         else:
@@ -204,7 +209,8 @@ def next_step(values: dict) -> str:
     chat = values.get("TELEGRAM_CHAT_ID", "")
     recent = (ROOT / "data" / "derived" / "recent.parquet").exists()
     if not (ROOT / ".env").exists():
-        return "Crea el .env:  cp .env.example .env && chmod 600 .env  y pega tus claves."
+        plantilla = "copy .env.example .env" if WINDOWS else "cp .env.example .env && chmod 600 .env"
+        return f"Crea el .env:  {plantilla}  y pega tus claves."
     if not token:
         return "Consigue el token:  python backend/scripts/telegram_setup.py --guide"
     if not chat:

@@ -86,10 +86,11 @@ await new Promise((r) => setTimeout(r, 1500))
 const html = dom.window.document.getElementById('root').innerHTML
 const checks = [
   ['cabecera', html.includes('PyroChronos')],
+  ['pestanas', html.includes('Calendario histórico') && html.includes('Mapa y alertas')],
   ['calendario montado', html.includes('Calendario de actividad')],
   ['mapa montado', html.includes('leaflet-container')],
-  ['resumen en una frase', html.includes('En una frase')],
-  ['descargas', html.includes('Descargar CSV de focos') || html.includes('Reporte ejecutivo')],
+  ['filtros', html.includes('Filtros')],
+  ['descargas', html.includes('CSV de focos') || html.includes('Reporte ejecutivo')],
   ['semaforo', html.includes('Ventana cr')],
   ['fetch llamado', calls >= 4],
   ['contexto climatico', /más seco de lo normal/.test(html)],
