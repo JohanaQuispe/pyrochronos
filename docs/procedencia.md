@@ -42,6 +42,31 @@ Los archivos crudos **no se versionan** (`data/raw/` está en `.gitignore`, son 
 versiona es `data/derived/detections.parquet` (13 MB) junto con `data/derived/dataset.json`, que
 guarda filas, rango de fechas, hash y parámetros de calidad usados.
 
+## Cómo importar un archivo propio ya limpio
+
+Si tus focos vienen de un archivo propio (por ejemplo `focos_incendios_limpios.csv`, o un XLSX de
+Excel, o un Parquet) y **no** llevan los nombres de archivo de FIRMS, no hace falta renombrar nada:
+
+```bash
+python backend/scripts/import_clean.py --file "C:\\ruta\\focos_incendios_limpios.csv" --inspect
+python backend/scripts/import_clean.py --file "C:\\ruta\\focos_incendios_limpios.csv" --write
+```
+
+- `--inspect` (por defecto) **no escribe nada**: muestra columnas reconocidas, rango de fechas,
+  cuántas filas por satélite, cuántas quedan dentro de la zona y cuántas caen por control de calidad.
+- `--write` guarda una copia del parquet anterior como `detections_antes_<fecha>.parquet` y recién
+  entonces escribe. Antes de reemplazar el almacén conviene mirar el informe de `--inspect`.
+- Reconoce nombres de columna en español e inglés (lat/lon, fecha, satélite, confianza, FRP, tipo),
+  fechas `2024-09-15` o `20240915`, confianza `l/n/h` o escala 0–100 de MODIS, y deduplica por
+  día + punto + sensor (`--dedupe off` para no hacerlo).
+- El resultado queda con el mismo esquema y el mismo control de calidad que
+  `build_dataset.py`, así que todo lo demás (calendario, anomalías, semáforo, reporte) funciona igual.
+
+**Las cifras cambian si los datos cambian.** El factor de armonización (5.828), los totales y los
+años más activos que aparecen en `docs/pitch.md` corresponden al parquet que está en el repositorio.
+Si importas tu propio archivo y el número de filas es distinto, hay que volver a correr
+`python backend/scripts/harmonize.py` y actualizar esas cifras antes de grabar o presentar.
+
 ## Qué NO se usa
 
 - No se usan los servicios WMS/WFS de FIRMS como fuente del calendario (no sirven para series).
