@@ -26,7 +26,7 @@ def build_summary(cards: dict, coverage: dict, calibration: dict, granularity: s
     start, end = coverage.get("start"), coverage.get("end")
     parts.append(
         f"En {zone_name} hay datos de {start} a {end} y {n(cards.get('total_detections'))} focos de calor "
-        "detectados por satelite en el rango elegido."
+        "detectados por satélite en el rango elegido."
     )
 
     if cards.get("season"):
@@ -62,7 +62,7 @@ def build_summary(cards: dict, coverage: dict, calibration: dict, granularity: s
         quality = "alta" if r >= 0.9 else "media" if r >= 0.7 else "baja"
         parts.append(
             f"En los años en que MODIS y VIIRS coinciden, sus series se parecen mucho "
-            f"(correlacion {r:.2f}, concordancia {quality})."
+            f"(correlación {r:.2f}, concordancia {quality})."
         )
     parts.append(
         "El calendario es histórico: sirve para ver patrones y periodos críticos, no para detectar "
