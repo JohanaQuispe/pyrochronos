@@ -1,0 +1,14 @@
+# entorno
+.venv/
+__pycache__/
+*.pyc
+.env
+node_modules/
+.vite/
+
+# datos crudos: nunca se versionan (son ~150 MB de CSV de NASA)
+data/raw/
+
+# artefactos
+.pytest_cache/
+*.log

@@ -1,0 +1,76 @@
+# PyroChronos - unica fuente de verdad de la configuracion.
+# Cambiar cualquier valor aqui y reconstruir: python backend/scripts/build_dataset.py
+project:
+  name: PyroChronos
+  version: "1.0.0"
+  disclaimer: >-
+    Analisis historico de focos de calor detectados por satelite. No es un sistema
+    de deteccion en tiempo real ni de prediccion de incendios.
+
+geo:
+  default_zone: peru
+  zones:
+    peru:
+      name: Peru
+      bbox: [-81.5, -18.5, -68.5, 0.5]   # oeste, sur, este, norte
+      note: "Zona precargada: archivos anuales por pais publicados por NASA FIRMS."
+    madrededios:
+      name: "Madre de Dios (amazonia sur)"
+      bbox: [-70.6, -13.4, -68.6, -11.0]
+      note: "Zona aproximada, util para comparar con Peru entero."
+    ucayali:
+      name: "Ucayali (amazonia central)"
+      bbox: [-76.0, -11.5, -73.0, -7.5]
+      note: "Zona aproximada."
+    loreto:
+      name: "Loreto (amazonia norte)"
+      bbox: [-78.0, -7.0, -73.0, -2.5]
+      note: "Zona aproximada."
+  # tamano maximo de una zona dibujada a mano (grados cuadrados)
+  max_area_deg2: 300.0
+
+grid:
+  cell_deg: 0.01          # ~1.1 km en el ecuador
+
+sources:
+  modis:
+    id: MODIS_SP
+    label: "MODIS (Terra+Aqua, 1 km)"
+    short: MODIS
+  viirs:
+    id: VIIRS_SNPP_SP
+    label: "VIIRS S-NPP (375 m)"
+    short: VIIRS
+  # ano en que cada fuente empieza a tener datos (referencia; la cobertura real
+  # se calcula siempre a partir de los datos cargados)
+  overlap_start: 2012-01-01
+  overlap_end: 2025-12-31
+
+quality:
+  min_conf_modis: 30      # MODIS: confianza numerica 0-100
+  min_conf_viirs: ["n", "h"]   # VIIRS: n=nominal, h=alta
+  exclude_types: []       # ej. [2] para excluir fuentes fijas industriales
+  static_source_types: [2] # 2 = fuente fija terrestre (industria, quema de gas)
+
+measures:
+  default: cell_days      # celda-dia con fuego (medida principal)
+  options: [cell_days, detections]
+
+harmonization:
+  shrink_min_years: 5     # menos anos que esto -> se usa el factor global
+  min_periods_for_factor: 5   # valor minimo del periodo para calcular el cociente
+
+anomalies:
+  high: 90                # percentil >= 90 -> "alto"
+  extreme: 97.5           # percentil >= 97.5 -> "extremo"
+  min_history_years: 6    # historial minimo para poder clasificar
+  window_periods: 1       # ventana +-1 semana/mes alrededor del periodo
+  min_value: 5            # no clasificar periodos con casi cero actividad
+
+api:
+  data_file: data/derived/detections.parquet
+  cache_size: 64
+  max_hotspots_geojson: 12000
+
+telegram:
+  enabled: false          # se activa con TELEGRAM_BOT_TOKEN y TELEGRAM_CHAT_ID
