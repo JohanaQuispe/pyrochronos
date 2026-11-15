@@ -1,4 +1,4 @@
-# Lista de entrega (domingo 12:00)
+# Lista de entrega (domingo, hasta las 24:00 de Lima)
 
 ## 1. Lo que ya está listo en este repositorio
 
@@ -7,8 +7,40 @@
 - [x] Metodología (`docs/metodologia.md`), procedencia de datos (`docs/procedencia.md`),
       verificado / POR VERIFICAR (`docs/verificado.md`) y guion del pitch (`docs/pitch.md`).
 - [x] Datos reales cargados (`data/derived/detections.parquet`): 1 323 016 focos, 2000-11 a 2025-12.
-- [x] 14 pruebas de backend + 2 pruebas de humo del frontend.
+- [x] 74 pruebas de backend + 2 pruebas de humo del frontend (motor, API, bot y POWER).
 - [x] Frontend compilado en `backend/webapp` (no hace falta `npm install` para la demo).
+
+## 1.b Textos listos para el formulario (copiar y pegar)
+
+**Nombre:** PyroChronos
+
+**Una frase (≤140 caracteres):**
+> Calendario de fuego para brigadas de bomberos: armoniza 25 años de MODIS y VIIRS para anticipar la
+> temporada y confirmar focos en campo.
+
+**Descripción corta (≤300 caracteres):**
+> Dos satélites, dos escalas: MODIS (1 km, desde 2000) y VIIRS (375 m, desde 2012) no se pueden
+> comparar directamente. PyroChronos los armoniza en un calendario común y lo convierte en un semáforo
+> de temporada y un bot que avisa a la brigada cuando un foco intenso aparece cerca.
+
+**Descripción larga:**
+> Las brigadas de bomberos forestales no saben con precisión cuándo arranca su temporada, no pueden
+> comparar este año con los anteriores (los registros de MODIS y VIIRS no son comparables) y se enteran
+> de los focos por una llamada. PyroChronos armoniza 25 años de focos de calor de NASA FIRMS en una
+> cuadrícula común de 0,01°, con un factor de calibración medido en los 14 años de solape (5,83 veces,
+> r = 0,98) y banda de incertidumbre; los años anteriores a 2012 se marcan como estimados. Sobre esa
+> base calcula estacionalidad, anomalías por percentil y un semáforo de temporada por zona, y lo lleva
+> al campo con un bot de Telegram: cuando un foco supera el percentil 95 de intensidad de su zona y cae
+> dentro del radio del usuario, envía distancia, rumbo, un pin y tres botones para confirmar qué era
+> (fuego real, quema agrícola o falsa alarma). El sistema no predice incendios ni sustituye un aviso
+> oficial, y lo dice en cada pantalla y en cada mensaje.
+
+**Público objetivo:** brigadas de bomberos forestales y comités de emergencia del Perú (amazonía sur y
+central). Guardaparques, agricultores y municipios son el siguiente alcance
+([`publico-objetivo.md`](publico-objetivo.md)).
+
+**Tecnologías:** Python (FastAPI, pandas, NumPy), React (Vite, Tailwind, Leaflet), Parquet, Bot API de
+Telegram, NASA FIRMS y NASA POWER. Licencia MIT.
 
 ## 2. Lo que falta hacer a mano (30-45 min)
 

@@ -1,12 +1,21 @@
-# PyroChronos · calendario de actividad de incendios
+# PyroChronos · calendario de fuego para brigadas de bomberos
 
-Aplicación web que **armoniza los focos de calor de MODIS y VIIRS** (NASA FIRMS) en un único
-calendario de actividad de incendios, para que una persona pueda ver en menos de un minuto
-**cuándo es la temporada de fuego de su zona** y **qué años o meses fueron anormales**.
+Aplicación web y bot de Telegram que **armonizan los focos de calor de MODIS y VIIRS** (NASA FIRMS)
+en un único calendario, para que una brigada de bomberos pueda saber en menos de un minuto
+**cuándo empieza su temporada de fuego**, **si este año viene más fuerte que los anteriores** y
+**dónde mirar primero**.
 
 - Reto: *Harmonization of MODIS and VIIRS Hot Spots* — NASA Space Apps Challenge 2026.
 - Datos reales: Perú, MODIS desde 2000-11 y VIIRS S-NPP desde 2012, hasta 2025-12-31.
-- **No es detección en tiempo real ni predicción.** Es análisis histórico.
+- **No es detección en tiempo real ni predicción.** Es análisis histórico y detección satelital con
+  ~3 h de latencia que **pide confirmación en campo**.
+
+## Para quién es
+
+**Brigadas de bomberos forestales y comités de emergencia** de zonas con temporada seca marcada
+(Perú y sus regiones amazónicas). Guardaparques, agricultores y municipios son el siguiente alcance,
+en ese orden: el motor ya les serviría, pero **no están validados** con ellos todavía.
+Detalle completo en [`docs/publico-objetivo.md`](docs/publico-objetivo.md).
 
 ## Lo que hace hoy (verificado con datos reales)
 

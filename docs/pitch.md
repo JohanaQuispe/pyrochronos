@@ -12,10 +12,11 @@
 **0:00 — El problema, en una frase.**
 > "Dos satélites llevan 25 años fotografiando incendios. Uno ve 1 km, el otro 375 m, así que sus
 > registros no se pueden comparar. Sin arreglar eso, nadie puede decir si un año fue peor que otro.
-> PyroChronos los armoniza en un solo calendario y lo convierte en un aviso para quien está en el campo."
+> PyroChronos los armoniza en un solo calendario **para brigadas de bomberos**: saber cuándo empieza su
+> temporada, si este año viene más fuerte y dónde mirar primero."
 
 **0:20 — El semáforo (lo primero que se ve).**
-> "Un guardaparque no necesita un gráfico: necesita saber si está entrando en su temporada de riesgo.
+> "Un jefe de brigada no necesita un gráfico: necesita saber si está entrando en su temporada de riesgo.
 > Hoy, en Perú, el semáforo dice 'fuera de temporada'. Si me pongo en la semana 36…"
 > *(abre «Qué hacer», cambia la fecha de referencia a una semana de septiembre)*
 > "…pasa a **ventana crítica**: la semana 36 es la de mayor actividad histórica. Y me dice qué hacer,
@@ -48,7 +49,7 @@ Abre "Cómo se armonizó":
 > reprocesarse y el factor asume que la sensibilidad relativa entre satélites es estable."
 
 **2:30 — El aviso que llega al grupo.**
-> "El mismo cálculo se puede correr cada hora y mandar por Telegram a un grupo de guardaparques,
+> "El mismo cálculo se puede correr cada hora y mandar por Telegram a un grupo de brigada,
 > **solo cuando el nivel sube**. No es detección en tiempo real: los satélites ven el calor después de
 > que el fuego empezó, y el mensaje lo dice. Lo que aporta es anticipación estacional y un aviso que
 > llega en horas, no en días."
@@ -57,6 +58,17 @@ Abre "Cómo se armonizó":
 > "En resumen: una persona elige su zona y entiende su temporada y sus años anormales en menos de un
 > minuto; la armonización está validada en 14 años de solape y declara su incertidumbre; y de ahí salen
 > un CSV, un reporte y un aviso para quien tiene que actuar."
+
+**2:55 — Para quién es (y para quién no todavía).**
+> "Está pensado para **brigadas de bomberos**: gente que necesita anticiparse a la temporada con pocos
+> recursos y confirmar en campo antes de movilizar. Guardaparques, agricultores y municipios vienen
+> después: el motor ya les serviría, pero no los hemos validado con ellos y no lo vamos a fingir."
+
+## Público objetivo en una frase
+
+Brigadas de bomberos forestales y comités de emergencia de zonas con temporada seca marcada. El
+detalle (persona, preguntas que responde, alcance y siguientes pasos) está en
+[`docs/publico-objetivo.md`](publico-objetivo.md).
 
 ## Preguntas probables del jurado
 
@@ -67,9 +79,14 @@ activa con una clave gratuita y un comando. La demo corre con el histórico porq
 salida a internet.
 
 **¿Entonces sirve para bomberos?**
-Sirve para **anticipar** (semáforo de temporada, ventana crítica, años anómalos) y para **priorizar
-monitoreo**. Para respuesta inmediata existen los servicios de FIRMS en tiempo real; nosotros no los
-duplicamos, los convertimos en calendario comparable y en aviso legible.
+Es exactamente para eso: **anticipar la temporada** (semáforo, ventana crítica, años anómalos) y
+**priorizar el monitoreo cerca de donde está la brigada** (el bot avisa cuando un foco intenso cae en
+su radio y pide confirmación). Para respuesta inmediata existen los servicios de FIRMS en tiempo real;
+nosotros no los duplicamos: los convertimos en calendario comparable y en aviso legible.
+
+**¿Y guardaparques, agricultores, municipios?**
+Son el siguiente alcance, en ese orden, y está escrito en `docs/publico-objetivo.md`. Hoy no están
+validados con ellos, así que no los presentamos como usuarios reales.
 
 **¿Por qué celdas‑día y no número de focos?**
 Porque VIIRS tiene 375 m y observa dos veces por noche: contar detecciones infla los años recientes.
