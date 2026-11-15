@@ -36,7 +36,9 @@ ALIASES = {
     "lon": ["longitude", "longitud", "lon", "lng", "long", "x"],
     "date": ["acq_date", "fecha", "fecha_adquisicion", "date", "fecha_deteccion", "dia"],
     "time": ["acq_time", "hora", "time", "hora_adquisicion"],
-    "satellite": ["satellite", "satelite", "instrument", "instrumento", "source", "fuente", "sat", "sensor"],
+    # `instrument` primero: en los CSV de FIRMS trae MODIS/VIIRS, mientras que
+    # `satellite` trae sólo letras o números (T, A, N, N20, N21) y no dice el sensor.
+    "satellite": ["instrument", "instrumento", "satellite", "satelite", "sensor", "source", "fuente", "sat"],
     "confidence": ["confidence", "confianza", "conf", "nivel_confianza"],
     "frp": ["frp", "frp_mw", "potencia_radiativa", "power"],
     "type": ["type", "tipo", "tipo_foco"],
@@ -93,6 +95,41 @@ def read_any(path: Path) -> pd.DataFrame:
         return pd.read_csv(fh, sep=sep, low_memory=False)
 
 
+def satellite_columns(part: pd.DataFrame) -> list[str]:
+    """Columnas del archivo que podrían contener el sensor."""
+    encontradas = []
+    for col in part.columns:
+        if clean_name(col) in ALIASES["satellite"] and col not in encontradas:
+            encontradas.append(col)
+    return encontradas
+
+
+def resolve_part_sensor(part: pd.DataFrame, name: str, forced: int | None):
+    """Decide el sensor de un archivo y deja una sola columna `_sensor_final`."""
+    cols = detect_columns(list(part.columns))
+    col = cols.get("satellite")
+    if col:
+        mapeado = part[col].map(to_source)
+        bien = int(mapeado.notna().sum())
+        relleno = guess_source_from_name(name) or forced
+        if bien and relleno is not None and bien < len(part):
+            mapeado = mapeado.fillna({"MODIS": 1, "VIIRS": 2}.get(source_label(relleno)))
+        if bien:
+            part = part.copy()
+            part["_sensor_final"] = mapeado
+            return part, f"columna '{col}' ({bien:,} de {len(part):,} filas reconocidas)"
+
+    del_nombre = guess_source_from_name(name)
+    elegido = del_nombre if del_nombre is not None else forced
+    if elegido is not None:
+        origen = "el nombre del archivo" if del_nombre is not None else "--source"
+        part = part.drop(columns=satellite_columns(part), errors="ignore")
+        part["_sensor_final"] = source_label(elegido)
+        return part, f"{source_label(elegido)} deducido de {origen}"
+
+    return part, "sin sensor reconocible"
+
+
 def guess_source_from_name(name: str) -> int | None:
     """Deduce el sensor por el nombre del archivo (MODIS_SP_historico, VIIRS_NOAA20_...)."""
     text = name.lower()
@@ -130,12 +167,23 @@ def resolve_targets(raw: str) -> tuple[list[Path], str]:
     return [], "no encontrado"
 
 
+MODIS_CODES = {"1", "1.0", "mod", "modis", "t", "terra", "a", "aqua"}
+VIIRS_CODES = {"2", "2.0", "v", "viirs", "n", "npp", "snpp", "n20", "n21",
+               "noaa20", "noaa21", "noaa", "jpss", "jpss1", "jpss2"}
+
+
 def to_source(value) -> int | None:
-    """MODIS -> 1, VIIRS -> 2 (los códigos del almacén)."""
+    """MODIS -> 1, VIIRS -> 2 (los códigos del almacén).
+
+    Acepta el nombre del instrumento (`MODIS`, `VIIRS`) y también los códigos de
+    satélite de FIRMS: MODIS usa T/A (Terra/Aqua) y VIIRS usa N/N20/N21.
+    """
     text = str(value).strip().lower()
-    if "modis" in text or text in ("1", "1.0"):
+    if text in ("", "nan", "none"):
+        return None
+    if "modis" in text or text in MODIS_CODES:
         return normalize.SOURCE_MODIS
-    if "viirs" in text or text in ("2", "2.0"):
+    if "viirs" in text or text in VIIRS_CODES:
         return normalize.SOURCE_VIIRS
     return None
 
@@ -253,13 +301,10 @@ def main() -> int:
         if part.empty:
             print(f"  (vacío, se omite)")
             continue
+        part, nota_sensor = resolve_part_sensor(part, one.name, args.source)
+        print(f"  sensor: {nota_sensor}")
         if len(paths) > 1:
             part["_origen"] = one.name
-        if "satellite" not in detect_columns(list(part.columns)):
-            guessed = guess_source_from_name(one.name)
-            if guessed is not None:
-                part["_sensor_por_nombre"] = source_label(guessed)
-                print(f"  sensor deducido del nombre: {source_label(guessed)}")
         partes.append(part)
     if not partes:
         print("ERROR: no se pudo leer ninguna fila.")
@@ -284,16 +329,12 @@ def main() -> int:
         origen = None
     cols = detect_columns(list(df.columns))
     sensor_note = "columna del archivo"
-    if "satellite" not in cols and "_sensor_por_nombre" in df.columns:
-        cols["satellite"] = "_sensor_por_nombre"
-        sensor_note = "deducido del nombre de cada archivo"
-        print("Sensor: tomado del nombre de cada archivo.")
-    elif "satellite" not in cols and args.source:
-        sensor_note = f"declarado a mano como {source_label(args.source)} (no venía en el archivo)"
-        df["_sensor_declarado"] = source_label(args.source)
-        cols["satellite"] = "_sensor_declarado"
-        print(f"Sensor: declarado a mano como {source_label(args.source)} para TODAS las filas.")
-        print("  (no viene en el archivo: queda anotado así en dataset.json)")
+    if "_sensor_final" in df.columns:
+        for col in satellite_columns(df):
+            if col in (cols.get("satellite"),):
+                df = df.drop(columns=[col])
+        cols["satellite"] = "_sensor_final"
+        sensor_note = "resuelto por archivo (instrumento, nombre o --source)"
 
     faltan = [f for f in REQUIRED if f not in cols]
     if faltan:
