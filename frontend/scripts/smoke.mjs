@@ -25,7 +25,8 @@ import SummaryCards from './src/components/SummaryCards.jsx'
 import CalendarHeatmap from './src/components/CalendarHeatmap.jsx'
 import AnomalyChart from './src/components/AnomalyChart.jsx'
 import HarmonizationPanel from './src/components/HarmonizationPanel.jsx'
-import ActionBar from './src/components/ActionBar.jsx'
+import Tabs from './src/components/Tabs.jsx'
+import FiltersPanel from './src/components/FiltersPanel.jsx'
 
 const data = ${JSON.stringify(payload)}
 const params = { zone: 'peru', start: data.meta.start, end: data.meta.end, granularity: data.meta.granularity, measure: data.meta.measure, sources: 'both' }
@@ -38,7 +39,7 @@ export function render() {
     React.createElement(CalendarHeatmap, { data, onPickYear: () => {} }),
     React.createElement(AnomalyChart, { data, years: data.calendar.years, onYearChange: () => {} }),
     React.createElement(HarmonizationPanel, { data }),
-    React.createElement(ActionBar, { downloads: { hotspots: '/api/csv/hotspots', series: '/api/csv/series', report: '/api/report' }, data, onExportPng: () => {} }),
+    React.createElement(Tabs, { items: [{ key: 'calendario', label: 'Calendario histórico' }, { key: 'mapa', label: 'Mapa y alertas' }], value: 'calendario', onChange: () => {} }),
   ))
   return new Promise((resolve) => setTimeout(() => resolve(el.innerHTML), 400))
 }
@@ -64,7 +65,7 @@ const checks = [
   ['calendario', html.includes('Calendario de actividad')],
   ['anio 2000', html.includes('2000')],
   ['armonizacion', html.includes('Cómo se armonizó') || html.includes('C&oacute;mo se armoniz')],
-  ['descargas', html.includes('Descargar CSV de focos') && html.includes('Reporte ejecutivo')],
+  ['pestanas', html.includes('Calendario histórico') && html.includes('Mapa y alertas')],
   ['celdas renderizadas', (html.match(/role="gridcell"/g) || []).length > 100],
 ]
 let failed = 0
