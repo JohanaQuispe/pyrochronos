@@ -11,14 +11,16 @@ import AnomalyChart from './components/AnomalyChart.jsx'
 import MapPanel from './components/MapPanel.jsx'
 import HarmonizationPanel from './components/HarmonizationPanel.jsx'
 import BulletinCard from './components/BulletinCard.jsx'
+import FieldPanel from './components/FieldPanel.jsx'
 import { exportCalendarPng } from './lib/exportPng'
 import { fmt } from './lib/scale'
 
 const BASE = import.meta.env.VITE_API_BASE || ''
 
 const TABS = [
-  { key: 'calendario', label: 'Calendario histórico' },
-  { key: 'mapa', label: 'Mapa y alertas' },
+  { key: 'mapa', label: 'Monitoreo', hint: 'campo' },
+  { key: 'calendario', label: 'Histórico' },
+  { key: 'campo', label: 'Campo y Telegram' },
 ]
 
 export default function App() {
@@ -36,7 +38,7 @@ export default function App() {
   const [error, setError] = useState(null)
   const [loading, setLoading] = useState(true)
   const [hotLoading, setHotLoading] = useState(false)
-  const [tab, setTab] = useState('calendario')
+  const [tab, setTab] = useState('mapa')
   const [filtersOpen, setFiltersOpen] = useState(false)
   const reqId = useRef(0)
 
@@ -240,8 +242,8 @@ export default function App() {
         <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
           <div>
             <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500">Monitoreo territorial / {zoneName || 'Perú'}</p>
-            <h1 className="text-[25px] font-semibold tracking-tight text-white sm:text-[32px]">{tab === 'calendario' ? 'Calendario histórico' : 'Mapa y alertas'}</h1>
-            <p className="mt-1 max-w-2xl text-[13px] leading-relaxed text-zinc-400">{tab === 'calendario' ? 'Identifica patrones históricos de focos de calor en tu zona.' : 'Explora las detecciones disponibles y sus coordenadas.'}</p>
+            <h1 className="text-[25px] font-semibold tracking-tight text-white sm:text-[32px]">{tab === 'calendario' ? 'Calendario histórico' : tab === 'campo' ? 'Campo y Telegram' : 'Mapa y alertas'}</h1>
+            <p className="mt-1 max-w-2xl text-[13px] leading-relaxed text-zinc-400">{tab === 'calendario' ? 'Identifica patrones históricos de focos de calor en tu zona.' : tab === 'campo' ? 'Consulta el estado de los datos para el trabajo de campo.' : 'Explora las detecciones disponibles y sus coordenadas.'}</p>
           </div>
           <div className="rounded-xl border border-white/[0.08] bg-white/[0.025] px-4 py-2 text-[11px] text-zinc-400">
             <span className="mr-2 inline-block h-1.5 w-1.5 rounded-full bg-zinc-400" /> Datos hasta <span className="font-medium tabular-nums text-zinc-200">{meta?.coverage.end || '—'}</span>
@@ -265,7 +267,7 @@ export default function App() {
           </div>
         )}
 
-        {/* --- Pestaña 1: calendario ------------------------------------- */}
+        {/* --- Vista histórica ------------------------------------------- */}
         <div
           role="tabpanel"
           id="panel-calendario"
@@ -309,7 +311,7 @@ export default function App() {
           )}
         </div>
 
-        {/* --- Pestaña 2: mapa y alertas --------------------------------- */}
+        {/* --- Monitoreo táctico ----------------------------------------- */}
         <div
           role="tabpanel"
           id="panel-mapa"
@@ -351,6 +353,11 @@ export default function App() {
               </p>
             </section>
           </div>
+        </div>
+
+        <div role="tabpanel" id="panel-campo" aria-labelledby="tab-campo" hidden={tab !== 'campo'} className="space-y-3">
+          <FieldPanel zone={state?.zone} zoneParams={zoneParams} />
+          {state && state.zone !== 'custom' && <BulletinCard zone={state.zone} />}
         </div>
 
         <footer className="mt-6 flex flex-wrap items-center gap-x-4 gap-y-1 border-t border-white/[0.06] pt-4 text-[10.5px] text-zinc-600">

@@ -26,7 +26,7 @@ export default function Tabs({ items, value, onChange, className = '' }) {
       role="tablist"
       aria-label="Vistas de PyroChronos"
       onKeyDown={onKeyDown}
-      className={`flex items-center gap-1 ${className}`}
+      className={`flex items-center gap-1.5 overflow-x-auto ${className}`}
     >
       {items.map((item) => {
         const active = item.key === value
@@ -43,8 +43,8 @@ export default function Tabs({ items, value, onChange, className = '' }) {
             tabIndex={active ? 0 : -1}
             type="button"
             onClick={() => onChange(item.key)}
-            className={`relative whitespace-nowrap px-3 py-4 text-[13px] font-medium transition ${
-              active ? 'text-white' : 'text-zinc-500 hover:text-zinc-200'
+            className={`relative rounded-xl px-3 py-2.5 text-[12.5px] sm:px-4 sm:text-[13px] transition ${
+              active ? 'bg-white/[0.075] text-white shadow-[inset_0_0_0_1px_rgba(255,255,255,.06)]' : 'text-zinc-500 hover:bg-white/[0.035] hover:text-zinc-200'
             }`}
           >
             {item.label}
@@ -53,7 +53,7 @@ export default function Tabs({ items, value, onChange, className = '' }) {
             ) : null}
             <span
               aria-hidden="true"
-              className={`absolute inset-x-2 -bottom-px h-px transition-opacity ${
+              className={`absolute inset-x-3 -bottom-px h-[2px] transition-opacity ${
                 active ? 'bg-fire opacity-100' : 'opacity-0'
               }`}
             />

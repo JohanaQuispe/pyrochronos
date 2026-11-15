@@ -27,6 +27,8 @@ export const api = {
   recentHotspots: (params, signal) => get('/api/recent/hotspots', params, signal),
   alert: (params, signal) => get('/api/alert', params, signal),
   recent: (params, signal) => get('/api/recent', params, signal),
+  geofences: (signal) => get('/api/geofences', {}, signal),
+  groundtruth: (signal) => get('/api/groundtruth', {}, signal),
   climate: (params, signal) => get('/api/climate-context', params, signal),
   csvUrl: (path, params) => `${BASE}${path}?${qs(params)}`,
 }

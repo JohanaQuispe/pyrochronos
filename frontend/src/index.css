@@ -3,90 +3,52 @@
 @tailwind utilities;
 
 :root { color-scheme: dark; }
-html, body, #root { height: 100%; }
-
+html, body, #root { min-height: 100%; }
+html { scroll-behavior: smooth; }
+[hidden] { display: none !important; }
 body {
   @apply bg-ink text-zinc-100 antialiased;
   font-family: Inter, Geist, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
   font-feature-settings: 'cv11', 'ss01';
   letter-spacing: -0.006em;
-  background-image: radial-gradient(ellipse at 50% -20%, #202023 0%, #09090b 48%);
+  background-image: radial-gradient(ellipse at 14% -8%, rgba(249,115,22,.11), transparent 34rem), radial-gradient(ellipse at 90% 0%, rgba(56,189,248,.055), transparent 28rem);
+  background-attachment: fixed;
 }
-[hidden] { display: none !important; }
-
-/* Foco visible en todo lo interactivo (AA) */
-:focus-visible { outline: 2px solid #fbbf24; outline-offset: 2px; border-radius: 6px; }
+button, input, select { font: inherit; }
+:focus-visible { outline: 2px solid #fbbf24; outline-offset: 3px; border-radius: 7px; }
+::selection { background: rgba(249,115,22,.32); color: #fff; }
 
 @layer components {
-  /* Tarjeta sutil: sin bordes pesados, solo un filo y un fondo apenas distinto */
   .card {
-    @apply rounded-2xl border border-white/[0.08] bg-[#111114] shadow-soft;
+    @apply rounded-2xl border border-white/[0.075] bg-[#10141c]/90;
+    box-shadow: 0 12px 34px -25px rgba(0,0,0,.9), inset 0 1px 0 rgba(255,255,255,.025);
   }
-  .card-flat {
-    @apply rounded-2xl border border-white/[0.04] bg-transparent;
-  }
-  .label {
-    @apply text-[10.5px] font-medium uppercase tracking-[0.14em] text-zinc-500;
-  }
+  .card-flat { @apply rounded-2xl border border-white/[0.06] bg-white/[0.018]; }
+  .label { @apply text-[10px] font-semibold uppercase tracking-[0.16em] text-zinc-500; }
   .metric { @apply text-[26px] font-semibold leading-none tracking-tight text-white; }
   .hint { @apply text-[11px] leading-snug text-zinc-500; }
   .btn {
-    @apply inline-flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/[0.03] px-3 py-1.5
-           text-[13px] text-zinc-200 transition hover:border-white/20 hover:bg-white/[0.06]
-           disabled:pointer-events-none disabled:opacity-40;
+    @apply inline-flex min-h-9 items-center justify-center gap-1.5 rounded-xl border border-white/10 bg-white/[0.035] px-3 py-2 text-[12px] font-medium text-zinc-200 transition duration-200 hover:border-white/20 hover:bg-white/[0.07] disabled:pointer-events-none disabled:opacity-40;
   }
-  .btn-quiet {
-    @apply inline-flex items-center gap-1.5 rounded-lg border border-transparent px-2.5 py-1.5
-           text-[13px] text-zinc-400 transition hover:bg-white/[0.05] hover:text-white;
-  }
-  .btn-primary {
-    @apply border-fire/30 bg-fire/15 text-orange-200 hover:border-fire/50 hover:bg-fire/20;
-  }
-  .chip {
-    @apply inline-flex items-center gap-1 rounded-full border border-white/10 px-2 py-0.5
-           text-[11px] text-zinc-400;
-  }
-  .seg {
-    @apply rounded-md px-2.5 py-1 text-[12.5px] text-zinc-400 transition hover:text-white;
-  }
-  .seg-on { @apply bg-white/[0.07] text-white; }
-  .input {
-    @apply rounded-lg border border-white/10 bg-[#19191d] px-2 py-1.5 text-[13px] text-zinc-100
-           transition hover:border-white/20 focus:border-white/25;
-  }
+  .btn-quiet { @apply inline-flex min-h-9 items-center justify-center gap-1.5 rounded-xl border border-transparent px-3 py-2 text-[12px] font-medium text-zinc-400 transition hover:bg-white/[0.06] hover:text-white; }
+  .btn-primary { @apply border-orange-400/30 bg-orange-500/10 text-orange-200 hover:border-orange-400/50 hover:bg-orange-500/15; }
+  .chip { @apply inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.025] px-2.5 py-1 text-[10px] font-medium text-zinc-400; }
+  .seg { @apply rounded-lg px-3 py-2 text-[12px] text-zinc-400 transition hover:text-white; }
+  .seg-on { @apply bg-white/[0.08] text-white shadow-sm; }
+  .input { @apply min-h-9 rounded-xl border border-white/10 bg-[#0b0e14] px-3 py-2 text-[12px] text-zinc-100 transition hover:border-white/20 focus:border-orange-300/50; }
 }
-
-/* Trama para los valores estimados (significado, no solo color) */
-.hatch {
-  background-image: repeating-linear-gradient(
-    45deg,
-    rgba(9, 9, 11, 0.6) 0 2px,
-    rgba(255, 255, 255, 0.26) 2px 3px,
-    rgba(9, 9, 11, 0.6) 3px 5px
-  );
+.hatch { background-image: repeating-linear-gradient(45deg,rgba(9,9,11,.6) 0 2px,rgba(255,255,255,.26) 2px 3px,rgba(9,9,11,.6) 3px 5px); }
+.leaflet-container { background:#0b0e14; font:inherit; filter:saturate(.8); }
+.leaflet-tile { filter:invert(1) hue-rotate(180deg) brightness(.82) contrast(.92) saturate(.5); }
+.leaflet-bar a { background:#161a22; color:#e4e4e7; border-color:#303744; }
+.leaflet-bar a:hover { background:#222936; }
+.leaflet-control-attribution { background:rgba(9,12,18,.78)!important; color:#87909e!important; font-size:9.5px!important; }
+.leaflet-control-attribution a { color:#c0c8d4!important; }
+::-webkit-scrollbar { width:10px; height:10px; }
+::-webkit-scrollbar-thumb { background:#303744; border-radius:8px; }
+::-webkit-scrollbar-track { background:transparent; }
+@media (max-width: 640px) {
+  .metric { font-size:22px; }
+  .leaflet-control-zoom a { width:34px!important; height:34px!important; line-height:34px!important; }
 }
-
-/* Mapa oscuro sin depender de un servidor de teselas con clave:
-   las teselas de OpenStreetMap se tiñen con filtro CSS. */
-.leaflet-container {
-  background: #0b0b0d;
-  font: inherit;
-  filter: saturate(0.75);
-}
-.leaflet-tile { filter: invert(1) hue-rotate(180deg) brightness(0.82) contrast(0.92) saturate(0.5); }
-.leaflet-bar a { background: #16161a; color: #e4e4e7; border-color: #27272a; }
-.leaflet-bar a:hover { background: #1f1f24; }
-.leaflet-control-attribution {
-  background: rgba(9, 9, 11, 0.75) !important;
-  color: #71717a !important;
-  font-size: 9.5px !important;
-}
-.leaflet-control-attribution a { color: #a1a1aa !important; }
-
-::-webkit-scrollbar { width: 10px; height: 10px; }
-::-webkit-scrollbar-thumb { background: #27272a; border-radius: 8px; }
-::-webkit-scrollbar-track { background: transparent; }
-
-@media (prefers-reduced-motion: reduce) {
-  * { transition: none !important; animation: none !important; }
-}
+@media (prefers-reduced-motion: reduce) { *,*::before,*::after { scroll-behavior:auto!important; transition:none!important; animation:none!important; } }
