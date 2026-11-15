@@ -35,9 +35,12 @@ const meta = {
 const hotspots = { type: 'FeatureCollection', features: [{ type: 'Feature', geometry: { type: 'Point', coordinates: [-69.1, -12.5] }, properties: { day: '2024-09-01', source: 'VIIRS', conf: 1, frp: 3.2 } }], meta: { total: 1, shown: 1, sampled: false } }
 
 let calls = 0
+const urls = []
 global.fetch = async (url) => {
   calls += 1
+  urls.push(String(url))
   const body = url.includes('/api/meta') ? meta
+    : url.includes('/api/recent/hotspots') ? { type: 'FeatureCollection', features: [], meta: { available: false, total: 0, shown: 0, sampled: false } }
     : url.includes('/api/hotspots') ? hotspots
       : url.includes('/api/bulletin') ? { text: 'boletin de prueba', zone: 'Peru', note: '' }
         : url.includes('/api/alert') ? {
@@ -96,6 +99,20 @@ const checks = [
   ['fetch llamado', calls >= 4],
   ['contexto climatico', /más seco de lo normal/.test(html)],
 ]
+const root = dom.window.document.getElementById('root')
+root.querySelector('#tab-mapa').click()
+await new Promise((r) => setTimeout(r, 100))
+checks.push(['pestaña mapa activa', !root.querySelector('#panel-mapa').hidden && root.querySelector('#panel-calendario').hidden])
+const layer = root.querySelector('[aria-label="Capa del mapa"]')
+layer.value = 'recent'
+layer.dispatchEvent(new dom.window.Event('change', { bubbles: true }))
+await new Promise((r) => setTimeout(r, 100))
+checks.push(['NRT ausente explicado', root.textContent.includes('Sin datos NRT cargados')])
+const sensor = root.querySelector('[aria-label="Sensor del mapa"]')
+sensor.value = 'viirs'
+sensor.dispatchEvent(new dom.window.Event('change', { bubbles: true }))
+await new Promise((r) => setTimeout(r, 100))
+checks.push(['filtro VIIRS en petición', urls.some((url) => url.includes('/api/recent/hotspots') && url.includes('sources=viirs'))])
 let failed = 0
 for (const [name, ok] of checks) {
   console.log(`${ok ? 'ok  ' : 'FALLO'} ${name}`)

@@ -152,6 +152,7 @@ def hotspots(
     end: str | None = None,
     sources: Literal["both", "modis", "viirs"] = "both",
     limit: int = 0,
+    conf_min: int = Query(0, ge=0, le=2),
 ):
     ds = dataset()
     bb, _ = resolve_zone(zone, bbox)
@@ -160,7 +161,30 @@ def hotspots(
     cap = int(limit) if int(limit) > 0 else int(cfg.api["max_hotspots_geojson"])
     if cap > 100000:
         raise HTTPException(400, "limit maximo 100000")
-    return hotspots_geojson(ds, bb, s, e, sources, cap)
+    return hotspots_geojson(ds, bb, s, e, sources, cap, conf_min)
+
+
+@app.get("/api/recent/hotspots")
+def recent_hotspots(
+    zone: str | None = None,
+    bbox: str | None = None,
+    sources: Literal["both", "modis", "viirs"] = "both",
+    conf_min: int = Query(0, ge=0, le=2),
+):
+    """Focos NRT guardados localmente; nunca implica una descarga en vivo."""
+    bb, _ = resolve_zone(zone, bbox)
+    df, info = nrt.load_recent(cfg)
+    if df is None or df.empty:
+        return {"type": "FeatureCollection", "features": [],
+                "meta": {"available": df is not None, "total": 0, "shown": 0,
+                         "sampled": False, "fetched_at": info.get("fetched_at"),
+                         "first_day": info.get("first_day"), "last_day": info.get("last_day")}}
+    ds = Dataset(df=df, generated_at="", source_version="nrt")
+    payload = hotspots_geojson(ds, bb, ds.start, ds.end, sources,
+                               int(cfg.api["max_hotspots_geojson"]), conf_min)
+    payload["meta"].update({"available": True, "fetched_at": info.get("fetched_at"),
+                            "first_day": info.get("first_day"), "last_day": info.get("last_day")})
+    return payload
 
 
 def _filter(df: pd.DataFrame, bb, s: date, e: date, sources: str) -> pd.DataFrame:

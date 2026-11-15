@@ -5,6 +5,7 @@
 :root { color-scheme: dark; }
 html, body, #root { min-height: 100%; }
 html { scroll-behavior: smooth; }
+[hidden] { display: none !important; }
 body {
   @apply bg-ink text-zinc-100 antialiased;
   font-family: Inter, Geist, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;

@@ -19,7 +19,7 @@ const BASE = import.meta.env.VITE_API_BASE || ''
 
 const TABS = [
   { key: 'mapa', label: 'Monitoreo', hint: 'campo' },
-  { key: 'calendario', label: 'Histórico', hint: '2000–2025' },
+  { key: 'calendario', label: 'Histórico' },
   { key: 'campo', label: 'Campo y Telegram' },
 ]
 
@@ -31,6 +31,10 @@ export default function App() {
   const [alertLoading, setAlertLoading] = useState(true)
   const [dateRef, setDateRef] = useState('')
   const [hotspots, setHotspots] = useState(null)
+  const [mapLayer, setMapLayer] = useState('history')
+  const [mapSource, setMapSource] = useState('both')
+  const [highConfidence, setHighConfidence] = useState(false)
+  const [mapError, setMapError] = useState(null)
   const [error, setError] = useState(null)
   const [loading, setLoading] = useState(true)
   const [hotLoading, setHotLoading] = useState(false)
@@ -116,6 +120,7 @@ export default function App() {
     if (!state || !activeBBox) return undefined
     const ctrl = new AbortController()
     setAlertLoading(true)
+    setAlert(null)
     api
       .alert({ ...zoneParams, date_ref: dateRef || undefined }, ctrl.signal)
       .then((a) => {
@@ -133,17 +138,23 @@ export default function App() {
     if (!state || !activeBBox) return undefined
     const ctrl = new AbortController()
     setHotLoading(true)
-    api
-      .hotspots({ ...zoneParams, start: state.start, end: state.end, sources: state.sources }, ctrl.signal)
-      .then((g) => {
-        setHotspots(g)
+    setHotspots(null)
+    setMapError(null)
+    const common = { ...zoneParams, sources: mapSource, conf_min: highConfidence ? 2 : 0 }
+    const request = mapLayer === 'recent'
+      ? api.recentHotspots(common, ctrl.signal)
+      : api.hotspots({ ...common, start: state.start, end: state.end }, ctrl.signal)
+    request.then((g) => {
+      setHotspots(g)
+      setHotLoading(false)
+    }).catch((e) => {
+      if (e.name !== 'AbortError') {
+        setMapError(e.message)
         setHotLoading(false)
-      })
-      .catch((e) => {
-        if (e.name !== 'AbortError') setHotLoading(false)
-      })
+      }
+    })
     return () => ctrl.abort()
-  }, [state, activeBBox, zoneParams])
+  }, [state, activeBBox, zoneParams, mapLayer, mapSource, highConfidence])
 
   const onBBoxChange = useCallback((bbox) => setState((s) => ({ ...s, zone: 'custom', bbox })), [])
 
@@ -178,7 +189,7 @@ export default function App() {
     try {
       exportCalendarPng(data, `pyrochronos_calendario_${data.meta.zone.replace(/\s+/g, '_')}.png`, state.palette)
     } catch (e) {
-      alert(`No se pudo generar la imagen: ${e.message}`)
+      window.alert(`No se pudo generar la imagen: ${e.message}`)
     }
   }
 
@@ -218,8 +229,8 @@ export default function App() {
         />
       )}
 
-      <div className="sticky top-14 z-20 border-b border-white/[0.06] bg-ink/75 backdrop-blur-xl">
-        <div className="mx-auto flex max-w-[1500px] items-center justify-between px-4">
+      <div className="border-b border-white/[0.06] bg-[#0b0b0d]">
+        <div className="mx-auto flex max-w-[1500px] items-center justify-between overflow-x-auto px-4 sm:px-6">
           <Tabs items={TABS} value={tab} onChange={setTab} />
           <p className="hidden text-[11px] text-zinc-600 md:block">
             {zoneName} · datos hasta {meta?.coverage.end ?? '…'} · {years.length || '—'} años
@@ -227,15 +238,17 @@ export default function App() {
         </div>
       </div>
 
-      <main id="main" className="mx-auto max-w-[1500px] px-4 pb-10 pt-5 sm:px-6 lg:px-8">
-        <section className="mb-5 flex flex-col justify-between gap-3 border-b border-white/[0.07] pb-5 sm:flex-row sm:items-end">
+      <main id="main" className="mx-auto max-w-[1500px] px-4 pb-10 pt-6 sm:px-6 sm:pt-8">
+        <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
           <div>
-            <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.22em] text-orange-300">NASA FIRMS · MODIS + VIIRS</p>
-            <h1 className="text-2xl font-semibold tracking-tight text-white sm:text-3xl">Del dato satelital a la acción en campo.</h1>
-            <p className="mt-2 max-w-2xl text-[13px] leading-relaxed text-zinc-400">Una vista unificada para vigilar focos detectados, entender la temporada histórica y coordinar la verificación en terreno.</p>
+            <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500">Monitoreo territorial / {zoneName || 'Perú'}</p>
+            <h1 className="text-[25px] font-semibold tracking-tight text-white sm:text-[32px]">{tab === 'calendario' ? 'Calendario histórico' : tab === 'campo' ? 'Campo y Telegram' : 'Mapa y alertas'}</h1>
+            <p className="mt-1 max-w-2xl text-[13px] leading-relaxed text-zinc-400">{tab === 'calendario' ? 'Identifica patrones históricos de focos de calor en tu zona.' : tab === 'campo' ? 'Consulta el estado de los datos para el trabajo de campo.' : 'Explora las detecciones disponibles y sus coordenadas.'}</p>
           </div>
-          <div className="flex items-center gap-2 self-start rounded-full border border-emerald-400/20 bg-emerald-400/[0.06] px-3 py-1.5 text-[11px] text-emerald-200 sm:self-auto"><span className="h-1.5 w-1.5 rounded-full bg-emerald-400"></span> Datos del repositorio · sin simulación</div>
-        </section>
+          <div className="rounded-xl border border-white/[0.08] bg-white/[0.025] px-4 py-2 text-[11px] text-zinc-400">
+            <span className="mr-2 inline-block h-1.5 w-1.5 rounded-full bg-zinc-400" /> Datos hasta <span className="font-medium tabular-nums text-zinc-200">{meta?.coverage.end || '—'}</span>
+          </div>
+        </div>
         <div aria-live="polite" className="sr-only">
           {loading ? 'Calculando el calendario…' : data ? 'Calendario actualizado' : 'Sin datos'}
         </div>
@@ -264,15 +277,9 @@ export default function App() {
         >
           {data && state && (
             <>
-              <p className="px-1 text-[12.5px] leading-relaxed text-zinc-400">
-                <span className="text-zinc-200">Para brigadas de bomberos:</span> saber cuándo empieza su
-                temporada, si este año viene más fuerte que los anteriores y dónde mirar primero. No predice
-                incendios: el satélite ve el calor cuando el fuego ya empezó.
-              </p>
               <AlertStrip alert={alert} loading={alertLoading} dateRef={dateRef} setDateRef={setDateRef} zoneName={zoneName} />
-
-              <p className="max-w-4xl px-1 text-[13px] leading-relaxed text-zinc-300">{data.summary}</p>
-
+              {state.sources === 'both' && <div role="note" className="rounded-xl border border-amber-400/20 bg-amber-400/[0.05] px-4 py-3 text-[12px] leading-relaxed text-zinc-300"><strong className="text-amber-200">Resultados armonizados provisionales.</strong> Se está revisando el cálculo para periodos con VIIRS sin MODIS. No uses los totales o el ranking anual como definitivos.</div>}
+              <div className="flex items-end justify-between pt-3"><div><p className="label">Resumen de la zona</p><h2 className="mt-1 text-[18px] font-semibold text-white">La actividad en perspectiva</h2></div><span className="hidden text-[11px] text-zinc-500 sm:block">PERIODO SELECCIONADO</span></div>
               <SummaryCards data={data} />
 
               <CalendarHeatmap
@@ -292,7 +299,7 @@ export default function App() {
                     <ol className="mt-2 space-y-1.5 text-[12px] leading-relaxed text-zinc-400">
                       <li>1 · La columna más intensa es la temporada de fuego de la zona.</li>
                       <li>2 · Cada fila es un año; compara filas para encontrar años anómalos.</li>
-                      <li>3 · ▲ y ◆ marcan periodos sobre lo normal; la trama rayada son valores estimados (antes de VIIRS).</li>
+                      <li>3 · ▲ y ◆ marcan periodos sobre lo normal; la trama rayada indica valores estimados.</li>
                       <li>4 · El semáforo dice en qué punto de esa temporada estamos hoy.</li>
                     </ol>
                   </section>
@@ -310,15 +317,22 @@ export default function App() {
           id="panel-mapa"
           aria-labelledby="tab-mapa"
           hidden={tab !== 'mapa'}
-          className="grid items-start gap-3 lg:grid-cols-[1.5fr_1fr]"
+          className="grid items-start gap-4 xl:grid-cols-[1.65fr_1fr]"
         >
-          <div className="h-[540px] lg:h-[calc(100vh-190px)] lg:min-h-[520px]">
+          <div className="h-[680px] sm:h-[700px] xl:h-[calc(100vh-210px)] xl:min-h-[680px]">
             <MapPanel
               bbox={activeBBox}
               hotspots={hotspots}
               meta={data?.meta}
               onBBoxChange={onBBoxChange}
               loading={hotLoading}
+              mapError={mapError}
+              layer={mapLayer}
+              onLayerChange={setMapLayer}
+              source={mapSource}
+              onSourceChange={setMapSource}
+              highConfidence={highConfidence}
+              onHighConfidenceChange={setHighConfidence}
               visible={tab === 'mapa'}
             />
           </div>

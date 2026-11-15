@@ -71,10 +71,11 @@ python backend/scripts/import_clean.py --file "C:\\ruta\\focos_incendios_limpios
 - El resultado queda con el mismo esquema y el mismo control de calidad que
   `build_dataset.py`, así que todo lo demás (calendario, anomalías, semáforo, reporte) funciona igual.
 
-**Las cifras cambian si los datos cambian.** El factor de armonización (5.828), los totales y los
-años más activos que aparecen en `docs/pitch.md` corresponden al parquet que está en el repositorio.
-Si importas tu propio archivo y el número de filas es distinto, hay que volver a correr
-`python backend/scripts/harmonize.py` y actualizar esas cifras antes de grabar o presentar.
+**Las cifras cambian si los datos cambian.** Las cifras de `docs/pitch.md` corresponden a la salida
+que la participante compartió de su parquet local, distinto del incluido en el repositorio. Para
+recalcular, se usa `python backend/scripts/numeros_pitch.py`. Antes de citar el total armonizado o
+el ranking como definitivos, debe revisarse la estimación de periodos con VIIRS sin MODIS señalada
+en `docs/pitch.md`.
 
 ## Qué NO se usa
 

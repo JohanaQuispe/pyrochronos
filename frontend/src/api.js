@@ -24,6 +24,7 @@ export const api = {
   meta: (signal) => get('/api/meta', {}, signal),
   calendar: (params, signal) => get('/api/calendar', params, signal),
   hotspots: (params, signal) => get('/api/hotspots', params, signal),
+  recentHotspots: (params, signal) => get('/api/recent/hotspots', params, signal),
   alert: (params, signal) => get('/api/alert', params, signal),
   recent: (params, signal) => get('/api/recent', params, signal),
   geofences: (signal) => get('/api/geofences', {}, signal),

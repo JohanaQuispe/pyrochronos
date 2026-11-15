@@ -128,3 +128,14 @@ def test_sent_dedupe(cfg):
     groundtruth.mark_sent(cfg, 42, "h1")
     assert groundtruth.already_sent(cfg, 42, "h1")
     assert not groundtruth.already_sent(cfg, 7, "h1")
+
+
+def test_alert_text_for_actual_normalized_nrt_row():
+    row = {'day': 20000, 'source': 2, 'conf_level': 2, 'lat': -12.5, 'lon': -69.2,
+           'distance_km': 6.4, 'cardinal': 'NE', 'frp': 52, 'frp_p95': 43}
+    text = geofence.alert_text(row, zone='Madre de Dios')
+    assert '2024-10-04' in text and 'VIIRS' in text and 'confianza alta' in text
+    assert '`-12.5000, -69.2000`' in text
+    assert 'https://www.google.com/maps/search/?api=1&query=-12.5000,-69.2000' in text
+    assert 'Hora de detección no disponible' in text
+    assert 'no mide cercanía a viviendas' in text

@@ -128,22 +128,39 @@ def alert_text(row: dict | pd.Series, radius_km: float = DEFAULT_RADIUS_KM, zone
     card = get("cardinal", "")
     frp = float(get("frp", float("nan")))
     p95 = float(get("frp_p95", float("nan")))
-    day = get("day_label", get("day", ""))
+    day = get("day_label", "")
+    if not day:
+        raw_day = get("day")
+        try:
+            day = str(pd.to_datetime(int(raw_day), unit="D", utc=True).date())
+        except (TypeError, ValueError, OverflowError):
+            day = "fecha no disponible"
     time_utc = get("time_utc", "")
-    sensor = get("sensor", "satélite")
-    conf = get("conf_label", "")
-    lines = [f"🔥 *Foco crítico* a {dist:.1f} km al {card} de tu posición"]
+    sensor = get("sensor") or {1: "MODIS", 2: "VIIRS"}.get(get("source"), "satélite")
+    conf = get("conf_label") or {0: "baja", 1: "nominal", 2: "alta"}.get(get("conf_level"), "no disponible")
+    lines = ["🚨 *ALERTA DE FOCO DE CALOR*"]
+    if zone:
+        lines.append(f"Zona vigilada: {zone}")
+    if math.isfinite(dist):
+        lines.append(f"📍 A {dist:.1f} km al {card} de tu posición compartida")
+    try:
+        lat, lon = float(get("lat")), float(get("lon"))
+        if math.isfinite(lat) and math.isfinite(lon) and -90 <= lat <= 90 and -180 <= lon <= 180:
+            coords = f"{lat:.4f},{lon:.4f}"
+            lines.append(f"Coordenadas: `{lat:.4f}, {lon:.4f}`")
+            lines.append(f"Mapa: https://www.google.com/maps/search/?api=1&query={coords}")
+    except (TypeError, ValueError):
+        pass
     when = " ".join(str(x) for x in (day, time_utc) if x)
-    if when:
-        lines.append(f"Detectado: {when} · {sensor}")
+    lines.append(f"🛰️ Detectado: {when} · {sensor} · confianza {conf}")
+    if not time_utc:
+        lines.append("Hora de detección no disponible; fecha UTC.")
     frp_txt = f"FRP {frp:.0f} MW"
     if not math.isnan(p95):
         frp_txt += f" (el 5 % más intenso de la zona empieza en {p95:.0f} MW)"
     lines.append(frp_txt)
-    if conf:
-        lines.append(f"Confianza: {conf}")
-    if zone:
-        lines.append(f"Zona vigilada: {zone} · radio {radius_km:.0f} km")
+    lines.append("Criterio: FRP elevado frente al historial; no mide cercanía a viviendas ni riesgo de propagación.")
+    lines.append("Viento, acceso y cercanía a poblados: no disponibles. Verificar por fuentes operativas.")
     lines.append("")
     lines.append("_Detección satelital, no un aviso oficial. Confírmala antes de movilizar._")
     return "\n".join(lines)

@@ -64,3 +64,31 @@ def test_groundtruth_roundtrip(client, field_dir):
     assert got["items"][0]["label"].startswith("🌾")
     bad = client.post("/api/groundtruth", json={"hotspot_id": "x", "verdict": "inventado"})
     assert bad.status_code == 422
+
+
+def test_recent_map_is_separate_and_filters_before_sampling(client, monkeypatch):
+    import pandas as pd
+    from pyro import nrt
+
+    frame = pd.DataFrame([
+        [20000, -12.5, -69.0, 2, 2, -1, 10.0, 0],
+        [20001, -12.5, -69.0, 2, 1, -1, 12.0, 0],
+        [20002, -12.5, -69.0, 1, 2, 90, 15.0, 0],
+    ], columns=['day', 'lat', 'lon', 'source', 'conf_level', 'conf_raw', 'frp', 'ftype'])
+    monkeypatch.setattr(nrt, 'load_recent', lambda cfg: (frame, {'fetched_at': '2024-10-05T00:00:00+00:00'}))
+    response = client.get('/api/recent/hotspots', params={'zone': 'madrededios', 'sources': 'viirs', 'conf_min': 2})
+    assert response.status_code == 200
+    result = response.json()
+    assert result['meta']['total'] == 1
+    assert result['meta']['fetched_at'] == '2024-10-05T00:00:00+00:00'
+    assert result['features'][0]['properties']['source'] == 'VIIRS'
+    assert result['features'][0]['properties']['conf'] == 2
+    assert client.get('/api/recent/hotspots', params={'conf_min': 3}).status_code == 422
+
+
+def test_recent_map_missing_is_not_zero_fires(client, monkeypatch):
+    from pyro import nrt
+    monkeypatch.setattr(nrt, 'load_recent', lambda cfg: (None, {}))
+    result = client.get('/api/recent/hotspots').json()
+    assert result['meta']['available'] is False
+    assert result['features'] == []
