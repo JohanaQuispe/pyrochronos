@@ -1,10 +1,27 @@
 import React from 'react'
 import { fmt } from '../lib/scale'
+import { useLanguage } from '../i18n.jsx'
 
 export default function HarmonizationPanel({ data }) {
+  const { lang } = useLanguage()
   const c = data.calibration
   const meta = data.meta
   const th = data.thresholds
+  if (lang === 'en') return <details className="card p-4">
+    <summary className="cursor-pointer text-sm font-semibold text-white">How harmonization works and its limits</summary>
+    <div className="mt-3 grid gap-3 sm:grid-cols-3">
+      <div className="rounded-lg border border-line bg-panelHi/60 p-3"><p className="label">Union / MODIS factor</p><p className="mt-1 text-lg font-semibold">{c.applicable ? fmt(c.global_factor, 2) : 'Not applicable'}</p><p className="hint mt-1">Calculated from years with both satellites ({c.overlap_years[0] ?? '—'}–{c.overlap_years[c.overlap_years.length - 1] ?? '—'}).</p></div>
+      <div className="rounded-lg border border-line bg-panelHi/60 p-3"><p className="label">Factor uncertainty</p><p className="mt-1 text-lg font-semibold">{c.applicable ? `${fmt(c.global_p25, 2)} – ${fmt(c.global_p75, 2)}` : '—'}</p><p className="hint mt-1">25th–75th percentile range of the ratios; hatching marks estimates.</p></div>
+      <div className="rounded-lg border border-line bg-panelHi/60 p-3"><p className="label">Satellite agreement</p><p className="mt-1 text-lg font-semibold">{c.agreement_r === null ? '—' : `r = ${c.agreement_r}`}</p><p className="hint mt-1">Correlation over {c.agreement_n} overlapping periods. Correlation does not establish equivalence.</p></div>
+    </div>
+    <div className="mt-3 space-y-2 text-[12px] leading-relaxed text-mist">
+      <p>The main measure is cell-days with heat detections: each {meta.cell_deg}° cell counts once per day across the sensors. This reduces duplicates but does not eliminate differences in resolution or coverage. Raw hotspots count individual detections.</p>
+      <p>Estimated periods are marked with hatching. The use of the union/MODIS factor for periods with VIIRS but no MODIS is under review; harmonized figures and rankings are provisional.</p>
+      <p>Anomalies compare a period with the same period (±1) in other years. Thresholds are percentiles {th.high} and {th.extreme}, requiring at least {th.min_history_years} historical years and {th.min_value} cell-days. Symbols supplement color.</p>
+      <p>FIRMS source types include vegetation, volcanoes, industrial sources and offshore detections; these types are not currently excluded by default.</p>
+      <p className="rounded-lg border border-amber-400/30 bg-amber-400/10 p-3 text-amber-100">Recent years may be incomplete or revised; coverage ends {meta.coverage.end}. The factor assumes stable sensor sensitivity and does not model algorithm changes or sensor loss.</p>
+    </div>
+  </details>
   return (
     <details className="card p-3" aria-labelledby="harm-title">
       <summary

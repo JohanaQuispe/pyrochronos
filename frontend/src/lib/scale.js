@@ -5,7 +5,7 @@
 // "fuego" evoca el fuego; "daltonismo" (tipo cividis) mantiene la luminosidad
 // monotona tambien para deuteranopia/protanopia.
 export const PALETTES = {
-  fuego: ['#1b2440', '#3b2a63', '#6b2f6e', '#9c3f5a', '#c85a35', '#e8842a', '#ffc46b'],
+  fuego: ['#30251e', '#66301c', '#a6381a', '#dc4b19', '#f77922', '#ffad39', '#ffe397'],
   daltonismo: ['#0d1b3e', '#13376a', '#2b5578', '#4a7076', '#7d8a63', '#b0a05a', '#f5e07a'],
 }
 

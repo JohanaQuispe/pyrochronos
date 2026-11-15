@@ -1,3 +1,4 @@
+import { useLanguage } from '../i18n.jsx'
 import React, { useEffect, useRef } from 'react'
 
 function Row({ title, hint, children }) {
@@ -33,6 +34,7 @@ function Segmented({ options, value, onChange, name }) {
  * Se abre con el botón "Filtros" y se cierra con Escape, la X o el fondo.
  */
 export default function FiltersPanel({ open, onClose, state, setState, years }) {
+  const { lang, t } = useLanguage()
   const closeRef = useRef(null)
 
   useEffect(() => {
@@ -52,69 +54,69 @@ export default function FiltersPanel({ open, onClose, state, setState, years }) 
     <div className="fixed inset-0 z-50 flex justify-end" role="dialog" aria-modal="true" aria-labelledby="filters-title">
       <button
         type="button"
-        aria-label="Cerrar filtros"
+        aria-label={t('Cerrar filtros', 'Close filters')}
         onClick={onClose}
         className="absolute inset-0 bg-black/60 backdrop-blur-[2px]"
       />
       <div className="relative flex h-full w-full max-w-[350px] flex-col border-l border-white/[0.07] bg-panel shadow-soft">
         <div className="flex items-center justify-between px-4 py-3">
           <h2 id="filters-title" className="text-[14px] font-medium text-white">
-            Filtros avanzados
+            {t('Filtros avanzados', 'Advanced filters')}
           </h2>
-          <button ref={closeRef} type="button" className="btn-quiet" onClick={onClose} aria-label="Cerrar">
+          <button ref={closeRef} type="button" className="btn-quiet" onClick={onClose} aria-label={t('Cerrar', 'Close')}>
             ✕
           </button>
         </div>
 
         <div className="flex-1 overflow-y-auto px-4 pb-4">
-          <Row title="Agrupación" hint="La semana muestra el detalle fino de la temporada; el mes, la vista de conjunto.">
+          <Row title={t('Agrupación', 'Grouping')} hint={t('La semana muestra el detalle fino de la temporada; el mes, la vista de conjunto.', 'Weeks show detail; months provide an overview.')}>
             <Segmented
-              name="Agrupación del calendario"
+              name={t('Agrupación del calendario', 'Calendar grouping')}
               value={state.granularity}
               onChange={(granularity) => set({ granularity })}
-              options={[['month', 'Mes'], ['week', 'Semana']]}
+              options={[['month', t('Mes', 'Month')], ['week', t('Semana', 'Week')]]}
             />
           </Row>
 
-          <Row title="Medida" hint="Celdas-día: cuántas celdas de ~1 km² tuvieron fuego. Focos: detecciones crudas.">
+          <Row title={t('Medida', 'Measure')} hint={t('Celdas-día: cuántas celdas de ~1 km² tuvieron fuego. Focos: detecciones crudas.', 'Cell-days: grid cells with detections per day. Hotspots: raw detections.')}>
             <Segmented
-              name="Medida"
+              name={t('Medida', 'Measure')}
               value={state.measure}
               onChange={(measure) => set({ measure })}
-              options={[['cell_days', 'Celdas-día'], ['detections', 'Focos']]}
+              options={[['cell_days', t('Celdas-día', 'Cell-days')], ['detections', t('Focos', 'Hotspots')]]}
             />
           </Row>
 
-          <Row title="Fuente" hint="Solo para verificar: muestra un satélite aislado. El calendario se armoniza siempre con ambos.">
+          <Row title={t('Fuente', 'Source')} hint={t('Solo para verificar: muestra un satélite aislado. El calendario se armoniza siempre con ambos.', 'Choose an individual satellite or the harmonized series.')}>
             <select
               className="input w-full"
-              aria-label="Fuente satelital"
+              aria-label={t('Fuente satelital', 'Satellite source')}
               value={state.sources}
               onChange={(e) => set({ sources: e.target.value })}
             >
-              <option value="both">Ambos (armonizado)</option>
-              <option value="modis">Solo MODIS</option>
-              <option value="viirs">Solo VIIRS</option>
+              <option value="both">{t('Ambos (armonizado)', 'Both (harmonized)')}</option>
+              <option value="modis">{t('Solo MODIS', 'MODIS only')}</option>
+              <option value="viirs">{t('Solo VIIRS', 'VIIRS only')}</option>
             </select>
           </Row>
 
-          <Row title="Paleta" hint="La rampa «Daltonismo» mantiene la lectura con deuteranopia o protanopia.">
+          <Row title={t('Paleta', 'Palette')} hint={t('La rampa «Daltonismo» mantiene la lectura con deuteranopia o protanopia.', 'The colorblind palette remains readable with deuteranopia or protanopia.')}>
             <Segmented
-              name="Paleta de color"
+              name={t('Paleta de color', 'Color palette')}
               value={state.palette}
               onChange={(palette) => set({ palette })}
-              options={[['fuego', 'Fuego'], ['daltonismo', 'Daltonismo']]}
+              options={[['fuego', t('Fuego', 'Fire')], ['daltonismo', t('Daltonismo', 'Colorblind')]]}
             />
           </Row>
 
-          <Row title="Año enfocado" hint="Resalta un año en el mapa y en el gráfico de anomalías.">
+          <Row title={t('Año enfocado', 'Focused year')} hint={t('Resalta un año en el mapa y en el gráfico de anomalías.', 'Highlights a year in the map and anomaly chart.')}>
             <select
               className="input w-full"
-              aria-label="Año enfocado"
+              aria-label={t('Año enfocado', 'Focused year')}
               value={state.year || ''}
               onChange={(e) => set({ year: e.target.value ? Number(e.target.value) : null })}
             >
-              <option value="">Todos los años</option>
+              <option value="">{t('Todos los años', 'All years')}</option>
               {years.map((y) => (
                 <option key={y} value={y}>
                   {y}
@@ -128,7 +130,7 @@ export default function FiltersPanel({ open, onClose, state, setState, years }) 
             className="btn mt-3 w-full justify-center"
             onClick={() => set({ granularity: 'month', measure: 'cell_days', sources: 'both', palette: 'fuego', year: null })}
           >
-            Restablecer
+            {t('Restablecer', 'Reset')}
           </button>
         </div>
       </div>

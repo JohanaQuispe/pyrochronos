@@ -45,6 +45,42 @@ def test_questions_missing_recent_and_unknown(cfg, ds):
     assert 'no puedo indicar una ruta segura' in assistant.answer_question('¿Qué ruta debo tomar?', cfg, ds, bbox, 'Perú')
 
 
+def test_recent_message_explains_count_date_and_uncertainty(cfg, ds, monkeypatch):
+    bbox = cfg.zone_bbox('peru')
+    monkeypatch.setattr(nrt, 'stats', lambda *_a, **_kw: {
+        'available': True, 'total': 856, 'last_day': '2026-11-15',
+        'meta': {'fetched_at': '2026-11-15T22:23:46+00:00', 'days': 3, 'bbox': list(bbox)},
+    })
+    answer = assistant.answer_question('¿Hay focos recientes?', cfg, ds, bbox, 'Perú')
+    assert '856 detecciones de calor' in answer
+    assert 'últimos 3 días solicitados' in answer
+    assert '15/11/2026 a las 17:23 (hora de Perú)' in answer
+    assert '15/11/2026 (fecha UTC)' in answer
+    assert 'no confirma un incendio' in answer and 'no indica que siga activo' in answer
+    assert 'cubra toda esta zona' not in answer
+
+
+def test_recent_message_warns_of_unknown_coverage_and_does_not_use_global_date(cfg, ds, monkeypatch):
+    bbox = cfg.zone_bbox('peru')
+    monkeypatch.setattr(nrt, 'stats', lambda *_a, **_kw: {
+        'available': True, 'empty': True, 'total': 0,
+        'meta': {'fetched_at': 'sin fecha', 'last_day': '2026-11-15'},
+    })
+    answer = assistant.answer_question('¿Hay focos cerca?', cfg, ds, bbox, 'Perú')
+    assert '0 detecciones' in answer and 'no disponible para esta zona' in answer
+    assert '15/11/2026' not in answer
+    assert 'puede estar desactualizada' in answer and 'no se ha comprobado' in answer.lower()
+    assert 'no calcula qué tan cerca' in answer
+
+
+def test_download_time_requires_timezone_and_detects_staleness():
+    now = datetime(2026, 11, 16, 4, tzinfo=timezone.utc)
+    assert assistant._download_time('2026-11-15T22:23:46Z', now) == ('15/11/2026 a las 17:23 (hora de Perú)', True)
+    assert assistant._download_time('2026-11-15T22:23:46', now) == ('fecha desconocida', False)
+    assert not assistant._download_time('2026-11-15T20:00:00Z', now)[1]
+    assert not assistant._download_time('2026-11-16T05:00:00Z', now)[1]
+
+
 def test_chat_endpoint(cfg, monkeypatch, ds):
     import api.main as main
     monkeypatch.setattr(main, 'cfg', cfg)
@@ -92,7 +128,7 @@ def test_alert_fresh_only_and_no_duplicates(bot, cfg, ds):
     tg = FakeTelegram()
     assert bot.check_alerts(cfg, tg, 'peru', ds) == 1
     assert len(tg.messages) == 1 and len(tg.locations) == 1
-    assert 'no un aviso oficial' in tg.messages[0]
+    assert 'ni un aviso oficial' in tg.messages[0]
     assert bot.check_alerts(cfg, tg, 'peru', ds) == 0
 
 

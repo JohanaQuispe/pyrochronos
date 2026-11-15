@@ -87,7 +87,9 @@ def test_alert_text_has_distance_disclaimer_and_pin_data():
     text = geofence.alert_text(row, 10.0, zone="Madre de Dios")
     assert "6.4 km al NE" in text
     assert "52 MW" in text and "43 MW" in text
-    assert "no un aviso oficial" in text
+    assert "ni un aviso oficial" in text
+    assert "distancia en línea recta" in text
+    assert "no es un incendio confirmado" in text.lower()
     assert "Madre de Dios" in text
 
 

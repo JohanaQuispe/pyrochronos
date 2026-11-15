@@ -1,7 +1,9 @@
 import React, { useEffect, useState } from 'react'
+import { useLanguage } from '../i18n.jsx'
 
 // El boletín es un borrador histórico opcional; copiarlo no envía mensajes.
 export default function BulletinCard({ zone }) {
+  const { t } = useLanguage()
   const [state, setState] = useState({ text: '', loading: false, error: null, copied: false })
 
   useEffect(() => {
@@ -28,20 +30,20 @@ export default function BulletinCard({ zone }) {
 
   return (
     <details className="card p-5">
-      <summary className="cursor-pointer text-base font-semibold text-white">Borrador de boletín histórico <span className="ml-1 text-xs font-normal text-zinc-300">· opcional</span></summary>
+      <summary className="cursor-pointer text-base font-semibold text-white">{t('Borrador de boletín histórico', 'Historical bulletin draft')} <span className="ml-1 text-xs font-normal text-zinc-300">· {t('opcional', 'optional')}</span></summary>
       <p className="mt-3 text-[13px] leading-relaxed text-zinc-200">
-        Resume la zona seleccionada para compartirla si lo deseas. No se envía automáticamente y no es una alerta de focos recientes. Copiar el texto no lo envía a Telegram.
+        {t('Resume la zona seleccionada para compartirla si lo deseas. No se envía automáticamente y no es una alerta de focos recientes. Copiar el texto no lo envía a Telegram.', 'A summary of the selected area to share if you wish. It is not sent automatically and is not a recent-hotspot alert. Copying it does not send it to Telegram.')}
       </p>
       <p className="mt-3 rounded-xl border border-amber-300/30 bg-amber-300/10 px-3 py-2 text-[12px] leading-relaxed text-amber-100">
-        Las cifras armonizadas y el ranking anual son provisionales mientras se revisa el cálculo para periodos con VIIRS sin MODIS.
+        {t('Las cifras armonizadas y el ranking anual son provisionales mientras se revisa el cálculo para periodos con VIIRS sin MODIS.', 'Harmonized figures and annual rankings are provisional while calculations for VIIRS-only periods are reviewed.')}
       </p>
-      {state.loading && <p className="mt-3 text-[13px] text-zinc-200">Preparando el borrador…</p>}
+      {state.loading && <p className="mt-3 text-[13px] text-zinc-200">{t('Preparando el borrador…', 'Preparing draft…')}</p>}
       {state.error && <p role="alert" className="mt-3 text-[13px] text-red-200">{state.error}</p>}
       {state.text && (
         <>
           <pre className="mt-3 max-h-64 overflow-auto whitespace-pre-wrap rounded-xl border border-amber-200 bg-amber-50 p-4 text-[12px] leading-relaxed text-stone-900">{state.text}</pre>
           <button type="button" className="btn btn-primary mt-3" onClick={copy}>
-            {state.copied ? '¡Copiado!' : 'Copiar borrador'}
+            {state.copied ? t('¡Copiado!', 'Copied!') : t('Copiar borrador', 'Copy draft')}
           </button>
         </>
       )}

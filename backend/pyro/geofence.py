@@ -138,11 +138,11 @@ def alert_text(row: dict | pd.Series, radius_km: float = DEFAULT_RADIUS_KM, zone
     time_utc = get("time_utc", "")
     sensor = get("sensor") or {1: "MODIS", 2: "VIIRS"}.get(get("source"), "satélite")
     conf = get("conf_label") or {0: "baja", 1: "nominal", 2: "alta"}.get(get("conf_level"), "no disponible")
-    lines = ["🚨 *ALERTA DE FOCO DE CALOR*"]
+    lines = ["🚨 *Aviso: detección de calor cercana*", "Un satélite detectó una señal de calor que cumple el criterio de intensidad del bot."]
     if zone:
         lines.append(f"Zona vigilada: {zone}")
     if math.isfinite(dist):
-        lines.append(f"📍 A {dist:.1f} km al {card} de tu posición compartida")
+        lines.append(f"📍 A {dist:.1f} km al {card} de la ubicación que compartiste (distancia en línea recta).")
     try:
         lat, lon = float(get("lat")), float(get("lon"))
         if math.isfinite(lat) and math.isfinite(lon) and -90 <= lat <= 90 and -180 <= lon <= 180:
@@ -152,17 +152,18 @@ def alert_text(row: dict | pd.Series, radius_km: float = DEFAULT_RADIUS_KM, zone
     except (TypeError, ValueError):
         pass
     when = " ".join(str(x) for x in (day, time_utc) if x)
-    lines.append(f"🛰️ Detectado: {when} · {sensor} · confianza {conf}")
+    lines.append(f"🛰️ Detectado: {when} (UTC) · {sensor} · confianza {conf}")
     if not time_utc:
         lines.append("Hora de detección no disponible; fecha UTC.")
-    frp_txt = f"FRP {frp:.0f} MW"
-    if not math.isnan(p95):
-        frp_txt += f" (el 5 % más intenso de la zona empieza en {p95:.0f} MW)"
-    lines.append(frp_txt)
-    lines.append("Criterio: FRP elevado frente al historial; no mide cercanía a viviendas ni riesgo de propagación.")
-    lines.append("Viento, acceso y cercanía a poblados: no disponibles. Verificar por fuentes operativas.")
+    if math.isfinite(frp):
+        frp_txt = f"Intensidad térmica (FRP): {frp:.0f} MW"
+        if math.isfinite(p95):
+            frp_txt += f"; umbral histórico de este sensor: {p95:.0f} MW"
+        lines.append(frp_txt)
+    lines.append("Este aviso se basa en intensidad térmica y distancia; no mide cercanía a viviendas ni riesgo de propagación.")
+    lines.append("No tenemos datos de viento ni acceso. Consulta fuentes operativas antes de actuar.")
     lines.append("")
-    lines.append("_Detección satelital, no un aviso oficial. Confírmala antes de movilizar._")
+    lines.append("_No es un incendio confirmado ni un aviso oficial. Confirma en campo antes de movilizar._")
     return "\n".join(lines)
 
 

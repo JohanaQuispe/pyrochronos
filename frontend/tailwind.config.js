@@ -4,14 +4,14 @@ export default {
   theme: {
     extend: {
       colors: {
-        // Azul noche y tonos cálidos inspirados en el logo de PyroChronos.
-        ink: '#111b2d',
-        panel: '#1b2940',
-        panelHi: '#26364e',
-        line: '#48556a',
+        // Negro carbón, naranja, amarillo y crema del logo.
+        ink: '#13110f',
+        panel: '#24201c',
+        panelHi: '#332b24',
+        line: '#625343',
         fire: '#ff7927',
         ember: '#ffd166',
-        mist: '#ded9d0',
+        mist: '#f0e1cc',
       },
       fontFamily: {
         sans: ['Inter', 'Geist', 'system-ui', 'Segoe UI', 'Roboto', 'sans-serif'],
