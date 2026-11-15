@@ -4,15 +4,14 @@ export default {
   theme: {
     extend: {
       colors: {
-        // Base neutra tipo zinc, sin azules: menos ruido, más foco en el dato.
-        ink: '#09090b',
-        panel: '#0e0e11',
-        panelHi: '#16161a',
-        line: '#27272a',
-        // El fuego es el único color con permiso para llamar la atención.
-        fire: '#f97316',
-        ember: '#fbbf24',
-        mist: '#a1a1aa',
+        // Azul noche y tonos cálidos inspirados en el logo de PyroChronos.
+        ink: '#111b2d',
+        panel: '#1b2940',
+        panelHi: '#26364e',
+        line: '#48556a',
+        fire: '#ff7927',
+        ember: '#ffd166',
+        mist: '#ded9d0',
       },
       fontFamily: {
         sans: ['Inter', 'Geist', 'system-ui', 'Segoe UI', 'Roboto', 'sans-serif'],

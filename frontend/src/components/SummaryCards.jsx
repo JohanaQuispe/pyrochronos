@@ -3,7 +3,7 @@ import { fmt, fmtCompact } from '../lib/scale'
 
 function Metric({ label, value, hint, index }) {
   return (
-    <div className="min-w-0 rounded-2xl border border-white/[0.08] bg-[#111114] p-4 shadow-soft sm:p-5">
+    <div className="min-w-0 rounded-2xl border border-white/[0.12] bg-panel p-4 shadow-soft sm:p-5">
       <div className="flex items-center justify-between gap-2"><p className="text-[12px] font-medium text-zinc-400">{label}</p><span aria-hidden="true" className="text-[10px] font-medium tabular-nums text-zinc-600">0{index}</span></div>
       <p className="mt-5 text-[25px] font-semibold leading-none tracking-tight text-white sm:text-[28px]">{value}</p>
       <p className="mt-2 min-h-[28px] text-[11px] leading-snug text-zinc-500">{hint}</p>

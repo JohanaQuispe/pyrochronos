@@ -6,11 +6,11 @@ export default function TopBar({ meta, state, setState, onShortcut, downloads, o
   const { zones, coverage } = meta
   const range = showDates ? 'custom' : state.start === coverage.start && state.end === coverage.end ? 'all' : '5y'
   return (
-    <header className="relative z-30 border-b border-white/[0.08] bg-[#0b0b0d]">
+    <header className="relative z-30 border-b border-orange-200/10 bg-[#101b2d]">
       <div className="mx-auto max-w-[1500px] px-4 sm:px-6">
         <div className="flex min-h-[74px] flex-wrap items-center gap-3 py-3 sm:gap-5">
           <a href="/" className="mr-auto flex min-w-[180px] items-center gap-3" aria-label="PyroChronos, inicio">
-            <span aria-hidden="true" className="grid h-10 w-10 place-items-center rounded-xl border border-white/15 bg-white/[0.04] text-[18px] font-bold tracking-tight text-white">P<span className="sr-only">yroChronos</span></span>
+            <img src="/logo.png" alt="" aria-hidden="true" className="h-11 w-11 rounded-xl border border-white/15 object-cover" />
             <span>
               <span className="block text-[16px] font-semibold leading-tight tracking-tight text-white">PyroChronos<span className="text-orange-400">.</span></span>
               <span className="mt-0.5 block text-[10px] font-medium uppercase tracking-[0.13em] text-zinc-500">Inteligencia territorial</span>

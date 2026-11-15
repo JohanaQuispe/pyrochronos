@@ -56,13 +56,6 @@ global.fetch = async (url) => {
           window: [{ week: 36, expected: 100, ratio: 1, in_peak: true }, { week: 37, expected: 80, ratio: 0.8, in_peak: true }],
           recent: { available: false }, disclaimer: 'No es un pronóstico.',
         }
-        : url.includes('/api/climate-context') ? {
-          available: true, zone: 'Madre de Dios', source: 'NASA POWER',
-          point: { lat: -12.2, lon: -69.6 }, fetched_at: '2026-11-15T10:00:00Z',
-          window: { start: '2026-10-16', end: '2026-11-14', days: 30, rain_mm: 41, dry_days: 24, tmax_mean_c: 32.4, rh_mean_pct: 68 },
-          history_years: 5, rain_climatology_mm: 120, rain_deficit_pct: -65.8, tmax_anomaly_c: 1.9,
-          level: 'seco', label: 'más seco de lo normal', note: 'Reanálisis NASA POWER en un punto central de la zona.',
-        }
         : calendar
   return { ok: true, status: 200, json: async () => body }
 }
@@ -106,7 +99,10 @@ const checks = [
   ['estado NRT explicado', html.includes('Sin datos NRT cargados')],
   ['geocercas consultadas', html.includes('Geocercas registradas')],
   ['veredictos consultados', html.includes('Veredictos registrados')],
-  ['contexto climatico', /más seco de lo normal/.test(html)],
+  ['logo visible', Boolean(dom.window.document.querySelector('header img[src="/logo.png"]'))],
+  ['sin NASA POWER en la interfaz', !html.includes('NASA POWER') && !urls.some((url) => url.includes('/api/climate-context'))],
+  ['boletín histórico opcional', html.includes('Borrador de boletín histórico') && html.includes('Copiar el texto no lo envía a Telegram')],
+  ['boletín solo en campo', !dom.window.document.querySelector('#panel-mapa').textContent.includes('Borrador de boletín histórico') && dom.window.document.querySelector('#panel-campo').textContent.includes('Borrador de boletín histórico')],
 ]
 const root = dom.window.document.getElementById('root')
 root.querySelector('#tab-mapa').click()

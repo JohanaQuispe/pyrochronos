@@ -13,7 +13,7 @@ export default function AlertStrip({ alert, loading, dateRef, setDateRef, zoneNa
   const style = available ? STYLES[alert.level] : STYLES.normal
   const recent = alert?.recent || {}
   return (
-    <section aria-live="polite" aria-label="Semáforo de temporada" className={`overflow-hidden rounded-2xl border ${style.border} bg-[#151416]`}>
+    <section aria-live="polite" aria-label="Semáforo de temporada" className={`overflow-hidden rounded-2xl border ${style.border} bg-panel`}>
       <div className="grid gap-4 p-4 sm:p-5 lg:grid-cols-[250px_1fr_auto] lg:items-center">
         <div>
           <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-zinc-500">Semáforo estacional · {zoneName}</p>

@@ -5,7 +5,6 @@ import Tabs from './components/Tabs.jsx'
 import FiltersPanel from './components/FiltersPanel.jsx'
 import AlertStrip from './components/AlertStrip.jsx'
 import SummaryCards from './components/SummaryCards.jsx'
-import ClimateCard from './components/ClimateCard.jsx'
 import CalendarHeatmap from './components/CalendarHeatmap.jsx'
 import AnomalyChart from './components/AnomalyChart.jsx'
 import MapPanel from './components/MapPanel.jsx'
@@ -239,7 +238,7 @@ export default function App() {
         />
       )}
 
-      <div className="border-b border-white/[0.06] bg-[#0b0b0d]">
+      <div className="border-b border-orange-200/10 bg-[#19263a]">
         <div className="mx-auto flex max-w-[1500px] items-center justify-between overflow-x-auto px-4 sm:px-6">
           <Tabs items={TABS} value={tab} onChange={setTab} />
           <p className="hidden text-[11px] text-zinc-600 md:block">
@@ -301,7 +300,6 @@ export default function App() {
               <div className="grid gap-3 lg:grid-cols-[1.55fr_1fr]">
                 <AnomalyChart data={data} years={years} onYearChange={(year) => setState((s) => ({ ...s, year }))} />
                 <div className="space-y-3">
-                  <ClimateCard zone={state.zone} />
                   <section className="card p-4" aria-labelledby="how-title">
                     <h2 id="how-title" className="label">
                       Cómo leerlo en 30 segundos
@@ -351,8 +349,6 @@ export default function App() {
           <div className="space-y-3">
             <AssistantPanel zoneParams={zoneParams} zoneName={zoneName} />
             <AlertStrip alert={alert} loading={alertLoading} dateRef={dateRef} setDateRef={setDateRef} zoneName={zoneName} />
-            <ClimateCard zone={state?.zone} />
-            {state && state.zone !== 'custom' && !state.zone.startsWith('d_') && <BulletinCard zone={state.zone} />}
             <section className="card p-4">
               <h2 className="label">Qué mirar aquí</h2>
               <p className="mt-2 text-[12px] leading-relaxed text-zinc-400">
