@@ -40,10 +40,13 @@
 - Probada con el **parquet del repositorio** (1 323 016 filas): validación mensual con exclusión del
   año evaluado, 14 años (2012–2025), mediana del error absoluto anual **7,63 %**, promedio **7,00 %**
   y máximo **16,54 %**, frente a la unión MODIS+VIIRS. Ver `docs/metodologia.md` para los límites.
-- **POR VERIFICAR en el equipo de la participante:** ejecutar `python backend/scripts/validacion_retrospectiva.py`
-  con su parquet de 2 212 061 filas. No extrapolar el 7,63 % ni redondearlo a 8 % para esa base.
-  La prueba no comprueba incendios de campo, no mide error real anterior a 2012 y no resuelve la
-  estimación de VIIRS sin MODIS.
+- **Resultado comunicado por la participante:** ejecutó `python backend/scripts/validacion_retrospectiva.py`
+  con su parquet local de 2 212 061 filas; 14 años (2012–2025), mediana del error absoluto anual
+  **4,94 %**, MAPE **7,01 %**, WAPE **7,04 %**, máximo **19,70 %** en 2025. El resultado fue
+  compartido en el chat; el parquet local no está disponible en este entorno para reproducirlo aquí.
+  La tabla completa y la huella del archivo están en `docs/validacion-retrospectiva.md`.
+- La prueba no comprueba incendios de campo, no mide error real anterior a 2012 y no resuelve la
+  estimación de VIIRS sin MODIS. Los doce meses con detecciones no prueban cobertura completa.
 
 ## Cifras locales y armonización
 

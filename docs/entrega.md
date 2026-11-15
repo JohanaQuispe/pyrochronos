@@ -23,6 +23,8 @@ muestra un calendario de estacionalidad y anomalías históricas. En los datos l
 participante contiene 2 212 061 detecciones entre noviembre de 2000 y noviembre de 2026. El sistema
 incluye una capa de datos recientes previamente descargados y un bot de Telegram que puede avisar
 sobre focos intensos cercanos a una ubicación compartida, con coordenadas y botones de confirmación.
+En una validación retrospectiva de 14 años del solape, la estimación desde MODIS tuvo una mediana de
+error absoluto anual de 4,94 % frente a la unión de los sensores, no frente a incendios confirmados.
 Una detección no es necesariamente un incendio. La armonización y las alertas requieren las
 verificaciones indicadas en `docs/pitch.md` y `docs/verificado.md`. No predice incendios ni sustituye
 un aviso oficial.

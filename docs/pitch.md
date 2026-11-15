@@ -41,19 +41,23 @@ comprobar las cifras antes de presentarlas como resultado definitivo.
 
 ## Validación retrospectiva (reproducible)
 
-En el **parquet de ejemplo del repositorio**, al retirar un año completo del solape para calibrar
-con los demás, la mediana del error absoluto anual de MODIS ajustado frente a la unión MODIS+VIIRS
-fue **7,63 % (aproximadamente 8 %)** en **14 años**; el máximo fue **16,54 %**. Esto describe ese
-parquet, no el local de 2 212 061 filas. La unión de sensores no es verdad de campo y la prueba no
-valida por sí sola el periodo anterior a 2012 ni el caso de VIIRS sin MODIS.
+La participante ejecutó la validación sobre su **parquet local de 2 212 061 filas** en Perú. Al
+retirar cada año completo del solape de la calibración y estimarlo desde MODIS, la **mediana del
+error absoluto porcentual anual fue 4,94 % en 14 años (2012–2025)**, frente a la unión observada
+MODIS+VIIRS. El error promedio (MAPE) fue **7,01 %**, el ponderado (WAPE) **7,04 %** y el mayor error
+anual **19,70 %** (2025). Ver [los resultados por año](validacion-retrospectiva.md).
 
-**Para el pitch con los datos locales:** ejecutar `python backend/scripts/validacion_retrospectiva.py`
-y sustituir el porcentaje y el número de años por el resultado real. Hasta entonces, **no afirmar
-que el error del conjunto local es 8 %**. Fórmula sugerida, una vez comprobada:
+> «Validamos retrospectivamente 14 años del solape: retiramos cada año de la calibración y lo
+> estimamos desde MODIS. La mediana del error absoluto anual fue 4,94 %, frente a la unión de los
+> dos satélites».
 
-> «En una validación retrospectiva dentro del solape, retiramos cada año de la calibración. La
-> mediana del error absoluto anual fue [resultado local] % en [n] años, frente a la unión satelital;
-> no es una medición de incendios confirmados en campo».
+El entrenamiento puede incluir años posteriores al año evaluado. La unión de sensores **no es verdad
+de campo**: esto no mide la precisión de detección de incendios. Tampoco valida directamente las
+estimaciones anteriores a 2012 ni corrige el caso de VIIRS sin MODIS. Cada año evaluado tiene
+detecciones de ambos sensores en los 12 meses, lo que no garantiza cobertura completa.
+
+El parquet de ejemplo del repositorio es distinto y dio **7,63 %** de mediana; no mezclar sus
+resultados con los del archivo local.
 
 ## Qué hace y qué no hace
 

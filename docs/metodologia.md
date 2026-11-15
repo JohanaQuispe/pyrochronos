@@ -102,9 +102,15 @@ al evaluado. Contrasta contra la **unión satelital, no contra incendios confirm
 valida directamente las estimaciones anteriores a 2012, otros departamentos ni el caso de VIIRS sin
 MODIS. El rango p25–p75 es dispersión de cocientes, no un intervalo de confianza garantizado.
 
-En el parquet de ejemplo del repositorio, con Perú y 14 años evaluados, la mediana fue **7,63 %**
-(≈8 %); el promedio fue 7,00 % y el máximo anual 16,54 %. **No son resultados del parquet local** de
-2 212 061 filas: deben calcularse por separado antes de citarse para esa base.
+La participante ejecutó esta validación sobre su parquet local de **2 212 061 filas** para Perú:
+14 años (2012–2025), **mediana del error absoluto anual 4,94 %**, MAPE 7,01 %, WAPE 7,04 % y mayor
+error absoluto anual 19,70 % (2025). La mediana del error firmado fue +2,21 %; ningún mes evaluado
+recurrió al factor global. El resultado comunicado y la tabla completa están en
+[`validacion-retrospectiva.md`](validacion-retrospectiva.md). No implica que el error de cada año sea
+4,94 %, ni demuestra cobertura completa o precisión frente a incendios confirmados.
+
+Como referencia separada, el parquet de ejemplo del repositorio dio una mediana de **7,63 %** en
+14 años; no mezclar las dos bases.
 
 ## 6. Anomalías
 
