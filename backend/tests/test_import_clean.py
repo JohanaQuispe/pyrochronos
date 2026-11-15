@@ -45,6 +45,33 @@ def test_source_and_confidence(imp):
     assert imp.to_conf_level(10, 1) == 0
 
 
+def test_guess_source_from_filename(imp):
+    assert imp.guess_source_from_name("MODIS_SP_historico.csv") == 1
+    assert imp.guess_source_from_name("VIIRS_NOAA20_historico.csv") == 2
+    assert imp.guess_source_from_name("viirs-snpp_2015.csv") == 2
+    assert imp.guess_source_from_name("focos_incendios_limpios.csv") is None
+
+
+def test_source_label(imp):
+    assert imp.source_label(1) == "MODIS"
+    assert imp.source_label(2) == "VIIRS"
+
+
+def test_resolve_targets_finds_other_extension(imp, tmp_path):
+    (tmp_path / "focos_incendios_limpios.xlsx").write_bytes(b"x")
+    found, how = imp.resolve_targets(str(tmp_path / "focos_incendios_limpios.csv"))
+    assert [f.name for f in found] == ["focos_incendios_limpios.xlsx"]
+    assert how == "mismo nombre, otra extensión"
+
+
+def test_resolve_targets_folder(imp, tmp_path):
+    (tmp_path / "a.csv").write_text("x")
+    (tmp_path / "nota.md").write_text("x")
+    found, how = imp.resolve_targets(str(tmp_path))
+    assert [f.name for f in found] == ["a.csv"]
+    assert how == "carpeta"
+
+
 def test_epoch_days_accepts_two_formats(imp):
     series = pd.Series(["2024-09-15", "20240916", "no-es-fecha"])
     days = imp.to_epoch_days(series)

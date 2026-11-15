@@ -56,6 +56,12 @@ python backend/scripts/import_clean.py --file "C:\\ruta\\focos_incendios_limpios
   cuántas filas por satélite, cuántas quedan dentro de la zona y cuántas caen por control de calidad.
 - `--write` guarda una copia del parquet anterior como `detections_antes_<fecha>.parquet` y recién
   entonces escribe. Antes de reemplazar el almacén conviene mirar el informe de `--inspect`.
+- **Si el archivo no trae columna de sensor** (sólo `latitude, longitude, acq_date, confidence, type`),
+  el sensor se deduce del **nombre del archivo** (`MODIS_SP_historico`, `VIIRS_NOAA20_…`). Si tampoco
+  el nombre lo dice, hay que declararlo con `--source modis` / `--source viirs`, y esa declaración
+  queda anotada en `dataset.json` (`sensor_note`) para no hacerla pasar por dato observado.
+- **Si el archivo no trae FRP**, el importador avisa: el calendario, las anomalías y el semáforo
+  funcionan igual, pero el indicador de FRP queda en cero y el reporte lo dice.
 - Reconoce nombres de columna en español e inglés (lat/lon, fecha, satélite, confianza, FRP, tipo),
   fechas `2024-09-15` o `20240915`, confianza `l/n/h` o escala 0–100 de MODIS, y deduplica por
   día + punto + sensor (`--dedupe off` para no hacerlo).
