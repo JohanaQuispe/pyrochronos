@@ -56,6 +56,9 @@ python backend/scripts/import_clean.py --file "C:\\ruta\\focos_incendios_limpios
   cuántas filas por satélite, cuántas quedan dentro de la zona y cuántas caen por control de calidad.
 - `--write` guarda una copia del parquet anterior como `detections_antes_<fecha>.parquet` y recién
   entonces escribe. Antes de reemplazar el almacén conviene mirar el informe de `--inspect`.
+- En los CSV de FIRMS la columna **`instrument`** dice el sensor (`MODIS` / `VIIRS`); la columna
+  `satellite` sólo trae códigos (`T`/`A` para Terra/Aqua, `N`/`N20`/`N21` para los VIIRS). El
+  importador usa `instrument` cuando existe y también entiende esos códigos.
 - **Si el archivo no trae columna de sensor** (sólo `latitude, longitude, acq_date, confidence, type`),
   el sensor se deduce del **nombre del archivo** (`MODIS_SP_historico`, `VIIRS_NOAA20_…`). Si tampoco
   el nombre lo dice, hay que declararlo con `--source modis` / `--source viirs`, y esa declaración

@@ -45,6 +45,50 @@ def test_source_and_confidence(imp):
     assert imp.to_conf_level(10, 1) == 0
 
 
+def test_instrument_wins_over_satellite_code(imp):
+    cols = imp.detect_columns(["latitude", "longitude", "acq_date", "satellite", "instrument", "confidence"])
+    assert cols["satellite"] == "instrument"
+
+
+def test_source_accepts_firms_satellite_codes(imp):
+    for code in ("T", "A", "terra", "aqua"):
+        assert imp.to_source(code) == 1, code
+    for code in ("N", "N20", "N21", "SNPP", "NOAA20", "JPSS1"):
+        assert imp.to_source(code) == 2, code
+    assert imp.to_source("-") is None
+
+
+def test_resolve_part_sensor_prefers_column(imp):
+    df = pd.DataFrame({
+        "latitude": [-12.0, -12.1], "longitude": [-69.0, -69.1],
+        "acq_date": ["2024-09-15", "2024-09-16"],
+        "satellite": ["T", "A"], "instrument": ["MODIS", "MODIS"], "confidence": ["h", "n"],
+    })
+    part, nota = imp.resolve_part_sensor(df, "archivo_sin_nombre.csv", None)
+    assert part["_sensor_final"].tolist() == [1, 1]
+    assert "instrument" in nota
+
+
+def test_resolve_part_sensor_falls_back_to_filename(imp):
+    df = pd.DataFrame({
+        "latitude": [-12.0], "longitude": [-69.0], "acq_date": ["2024-09-15"],
+        "satellite": ["-"], "instrument": [""], "confidence": ["h"],
+    })
+    part, nota = imp.resolve_part_sensor(df, "VIIRS_SP_historico.csv", None)
+    assert part["_sensor_final"].tolist() == ["VIIRS"]
+    assert "nombre" in nota
+    assert "satellite" not in part.columns
+
+
+def test_resolve_part_sensor_uses_forced_source(imp):
+    df = pd.DataFrame({
+        "latitude": [-12.0], "longitude": [-69.0], "acq_date": ["2024-09-15"],
+    })
+    part, nota = imp.resolve_part_sensor(df, "focos.csv", 1)
+    assert part["_sensor_final"].tolist() == ["MODIS"]
+    assert "--source" in nota
+
+
 def test_guess_source_from_filename(imp):
     assert imp.guess_source_from_name("MODIS_SP_historico.csv") == 1
     assert imp.guess_source_from_name("VIIRS_NOAA20_historico.csv") == 2
