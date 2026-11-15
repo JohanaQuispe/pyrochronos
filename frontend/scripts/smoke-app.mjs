@@ -39,7 +39,10 @@ global.fetch = async (url) => {
   calls += 1
   const body = url.includes('/api/meta') ? meta
     : url.includes('/api/hotspots') ? hotspots
-      : url.includes('/api/bulletin') ? { text: 'boletin de prueba', zone: 'Peru', note: '' }
+      : url.includes('/api/recent') ? { available: false, reason: 'No hay datos recientes cargados.', meta: {} }
+      : url.includes('/api/geofences') ? { count: 0, items: [] }
+        : url.includes('/api/groundtruth') ? { summary: { total: 0, counts: { fuego_real: 0, quema_agricola: 0, falsa_alarma: 0 } }, items: [] }
+          : url.includes('/api/bulletin') ? { text: 'boletin de prueba', zone: 'Peru', note: '' }
         : url.includes('/api/alert') ? {
           available: true, level: 'critico', severity: 2, label: 'Ventana crítica', short: 'Actividad histórica máxima',
           action: 'Activa vigilancia diaria.', reasons: ['Referencia: semana 36.', 'Pico en la semana 36.', 'Se espera 100 % del pico.'],
@@ -93,7 +96,10 @@ const checks = [
   ['filtros', html.includes('Filtros')],
   ['descargas', html.includes('CSV de focos') || html.includes('Reporte ejecutivo')],
   ['semaforo', html.includes('Ventana cr')],
-  ['fetch llamado', calls >= 4],
+  ['fetch llamado', calls >= 7],
+  ['estado NRT', html.includes('No hay datos recientes cargados')],
+  ['geocercas', html.includes('Geocercas registradas')],
+  ['validación humana', html.includes('Veredictos registrados')],
   ['contexto climatico', /más seco de lo normal/.test(html)],
 ]
 let failed = 0
