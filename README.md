@@ -58,7 +58,7 @@ python backend/scripts/build_dataset.py --raw data/raw
 ### Pruebas
 
 ```bash
-python -m pytest backend/tests -q      # 30 pruebas: normalización, cuadrícula, armonización, anomalías, API, Telegram
+python -m pytest backend/tests -q      # 53 pruebas: normalización, armonización, anomalías, API, campo y POWER
 cd frontend && npm run smoke           # monta la interfaz en jsdom y comprueba que renderiza sin errores
 ```
 
@@ -75,6 +75,17 @@ python backend/scripts/watch_alerts.py --zones peru,madrededios --send
 
 El bot se crea a mano en **@BotFather** (Telegram no permite crearlo por API); el resto lo hace
 `telegram_setup.py` sin imprimir nunca el token completo.
+
+### Modo campo: geocercas y bot (opcional)
+
+```bash
+python backend/scripts/bot.py --dry-run                  # el aviso, sin enviar nada
+python backend/scripts/bot.py --send-demo                # ejemplo marcado DEMO
+python backend/scripts/bot.py --poll                     # avisa si un foco cae en tu radio
+python backend/scripts/download_power.py --zone madrededios --years 5   # contexto NASA POWER
+```
+
+Detalles, comandos del bot y límites en [`docs/campo.md`](docs/campo.md).
 
 ### Focos recientes (NRT, ~3 h de latencia)
 
@@ -105,6 +116,8 @@ tipos de fuente excluidos, ventana de solape, umbrales de anomalía, límites de
 
 - [`docs/metodologia.md`](docs/metodologia.md) — cómo se armoniza, con fórmulas y límites.
 - [`docs/alertas.md`](docs/alertas.md) — semáforo de temporada, modo reciente y avisos por Telegram.
+- [`docs/campo.md`](docs/campo.md) — geocercas, pines, validación humana y contexto NASA POWER.
+- [`docs/arquitectura-tactica.md`](docs/arquitectura-tactica.md) — esquema PostGIS y diseño de la capa táctica.
 - [`docs/procedencia.md`](docs/procedencia.md) — de dónde salen los datos, con fechas y hashes.
 - [`docs/ia.md`](docs/ia.md) — declaración de uso de IA.
 - [`docs/pitch.md`](docs/pitch.md) — guion de 3 minutos y cómo hacer la demo.

@@ -22,7 +22,7 @@ const fakeCtx = new Proxy(
 )
 dom.window.HTMLCanvasElement.prototype.getContext = () => fakeCtx
 
-const calendar = JSON.parse(readFileSync('/tmp/payload_month.json', 'utf8'))
+const calendar = JSON.parse(readFileSync(new URL('./fixtures/calendar-month.json', import.meta.url), 'utf8'))
 const meta = {
   name: 'PyroChronos', version: '1.0.0', disclaimer: calendar.meta.disclaimer,
   zones: [
@@ -46,6 +46,13 @@ global.fetch = async (url) => {
           reference_date: '2026-09-08', week: 36, peak_week: 36, ratio: 1.0,
           window: [{ week: 36, expected: 100, ratio: 1, in_peak: true }, { week: 37, expected: 80, ratio: 0.8, in_peak: true }],
           recent: { available: false }, disclaimer: 'No es un pronóstico.',
+        }
+        : url.includes('/api/climate-context') ? {
+          available: true, zone: 'Madre de Dios', source: 'NASA POWER',
+          point: { lat: -12.2, lon: -69.6 }, fetched_at: '2026-11-15T10:00:00Z',
+          window: { start: '2026-10-16', end: '2026-11-14', days: 30, rain_mm: 41, dry_days: 24, tmax_mean_c: 32.4, rh_mean_pct: 68 },
+          history_years: 5, rain_climatology_mm: 120, rain_deficit_pct: -65.8, tmax_anomaly_c: 1.9,
+          level: 'seco', label: 'más seco de lo normal', note: 'Reanálisis NASA POWER en un punto central de la zona.',
         }
         : calendar
   return { ok: true, status: 200, json: async () => body }
@@ -84,7 +91,8 @@ const checks = [
   ['resumen en una frase', html.includes('En una frase')],
   ['descargas', html.includes('Descargar CSV de focos') || html.includes('Reporte ejecutivo')],
   ['semaforo', html.includes('Ventana cr')],
-  ['fetch llamado', calls >= 3],
+  ['fetch llamado', calls >= 4],
+  ['contexto climatico', /más seco de lo normal/.test(html)],
 ]
 let failed = 0
 for (const [name, ok] of checks) {

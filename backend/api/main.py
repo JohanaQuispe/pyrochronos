@@ -14,7 +14,7 @@ from typing import Literal
 
 import numpy as np
 import pandas as pd
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, HTMLResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
@@ -26,7 +26,7 @@ from pyro.notify import build_bulletin  # noqa: E402
 from pyro.alerts import build_alert  # noqa: E402
 from pyro.report import build_report_html  # noqa: E402
 from pyro import nrt  # noqa: E402
-from pyro.config import ROOT, load_config  # noqa: E402
+from pyro.config import ROOT, env, load_config  # noqa: E402
 from pyro.store import Dataset, load_dataset  # noqa: E402
 from pyro.summary import MONTHS  # noqa: E402
 
@@ -320,6 +320,107 @@ def bulletin(zone: str | None = None, years_back: int = 3):
         raise HTTPException(404, f"zona desconocida: {key}")
     text = build_bulletin(cfg, ds, key, years_back)
     return {"zone": cfg.zone_name(key), "text": text, "note": "Historico, no es una alerta en tiempo real."}
+
+
+# --- contexto meteorologico (NASA POWER, solo desde cache) -------------------
+from pyro import power  # noqa: E402
+
+
+@app.get("/api/climate-context")
+def climate_context(zone: str | None = None, date_ref: str | None = None):
+    """Déficit de lluvia y anomalía de Tmax de los últimos 30 días (NASA POWER).
+
+    Lee `data/derived/power_<zona>.json` precargado con download_power.py. Si no
+    existe, responde `available: false` con las instrucciones: no se inventa nada.
+    """
+    key = zone or cfg.default_zone
+    if key not in cfg.zones:
+        raise HTTPException(404, f"zona desconocida: {key}")
+    ref = parse_date(date_ref, None) if date_ref else None
+    return power.climate_context(cfg, key, ref)
+
+
+# --- capa de campo (geocercas, validacion humana) ----------------------------
+from pydantic import BaseModel, Field  # noqa: E402
+
+from pyro import geofence, groundtruth  # noqa: E402
+
+
+@app.get("/api/historical-grid")
+def historical_grid(
+    bbox: str | None = None,
+    zone: str | None = None,
+    start: str | None = None,
+    end: str | None = None,
+    granularity: Literal["month", "week"] = "week",
+    measure: Literal["cell_days", "detections"] | None = None,
+    sources: Literal["both", "modis", "viirs"] = "both",
+    year: int | None = None,
+):
+    """Matriz del calendario en llamas para un BBox (mismo motor que /api/calendar)."""
+    return calendar(zone=zone, bbox=bbox, start=start, end=end, granularity=granularity,
+                    measure=measure, sources=sources, year=year)
+
+
+class GeofenceIn(BaseModel):
+    telegram_id: int
+    lat: float = Field(ge=-90, le=90)
+    lon: float = Field(ge=-180, le=180)
+    radius_km: float = Field(default=10.0, ge=1, le=100)
+    name: str | None = None
+    role: str | None = None
+
+
+@app.post("/api/register-geofence")
+def register_geofence(body: GeofenceIn, request: Request):
+    """Registra la posicion de un usuario de campo y devuelve que focos tiene cerca.
+
+    Solo lo usa el servidor (bot/CLI): si existe PYRO_SETUP_KEY, hay que mandarla en
+    la cabecera X-Setup-Key. Nunca se llama desde el navegador con datos de terceros.
+    """
+    expected = env("PYRO_SETUP_KEY")
+    if expected and request.headers.get("x-setup-key") != expected:
+        raise HTTPException(401, "falta o no coincide la cabecera X-Setup-Key")
+    rec = groundtruth.save_geofence(cfg, body.telegram_id, body.lat, body.lon,
+                                    body.radius_km, body.name, body.role)
+    recent_df, _ = nrt.load_recent(cfg)
+    near = []
+    if recent_df is not None and not recent_df.empty:
+        bb = (body.lon - 0.5, body.lat - 0.5, body.lon + 0.5, body.lat + 0.5)
+        window = recent_df[(recent_df["lat"] >= bb[1]) & (recent_df["lat"] <= bb[3])
+                           & (recent_df["lon"] >= bb[0]) & (recent_df["lon"] <= bb[2])]
+        if not window.empty:
+            marked = geofence.mark_critical(window)
+            hits = geofence.nearest(marked, body.lat, body.lon, body.radius_km)
+            near = hits[["lat", "lon", "frp", "distance_km", "cardinal"]].round(4).to_dict("records")
+    return {"ok": True, "geofence": rec, "nearby_critical_hotspots": near,
+            "note": "Geocerca guardada. Los avisos los envia el bot, no la web."}
+
+
+@app.get("/api/geofences")
+def geofences():
+    """Geocercas activas (para pintar los puestos de campo en el mapa)."""
+    items = groundtruth.active_geofences(cfg)
+    return {"count": len(items), "items": items}
+
+
+class VerdictIn(BaseModel):
+    hotspot_id: str
+    verdict: Literal["fuego_real", "quema_agricola", "falsa_alarma"]
+    telegram_id: int | None = None
+
+
+@app.post("/api/groundtruth")
+def post_groundtruth(body: VerdictIn):
+    """Guarda una validacion humana (la misma que llega por los botones del bot)."""
+    rec = groundtruth.save_verdict(cfg, body.hotspot_id, body.telegram_id, body.verdict)
+    return {"ok": True, "record": rec, "summary": groundtruth.verdict_summary(cfg)}
+
+
+@app.get("/api/groundtruth")
+def get_groundtruth():
+    """Veredictos de campo y su resumen."""
+    return {"summary": groundtruth.verdict_summary(cfg), "items": groundtruth.load_verdicts(cfg)}
 
 
 # --- frontend compilado ------------------------------------------------------
