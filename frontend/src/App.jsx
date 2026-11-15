@@ -238,15 +238,15 @@ export default function App() {
         </div>
       </div>
 
-      <main id="main" className="mx-auto max-w-[1500px] px-4 pb-10 pt-6 sm:px-6 sm:pt-8">
-        <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
+      <main id="main" className="mx-auto max-w-[1600px] px-4 pb-10 pt-5 sm:px-6 sm:pt-7 lg:px-8">
+        <div className="mb-6 flex flex-col justify-between gap-4 border-b border-white/[0.07] pb-5 sm:flex-row sm:items-end">
           <div>
-            <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500">Monitoreo territorial / {zoneName || 'Perú'}</p>
-            <h1 className="text-[25px] font-semibold tracking-tight text-white sm:text-[32px]">{tab === 'calendario' ? 'Calendario histórico' : tab === 'campo' ? 'Campo y Telegram' : 'Mapa y alertas'}</h1>
-            <p className="mt-1 max-w-2xl text-[13px] leading-relaxed text-zinc-400">{tab === 'calendario' ? 'Identifica patrones históricos de focos de calor en tu zona.' : tab === 'campo' ? 'Consulta el estado de los datos para el trabajo de campo.' : 'Explora las detecciones disponibles y sus coordenadas.'}</p>
+            <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.2em] text-orange-300">NASA FIRMS · MODIS + VIIRS · {zoneName || 'Perú'}</p>
+            <h1 className="text-[25px] font-semibold tracking-tight text-white sm:text-[32px]">Del dato satelital a la acción en campo.</h1>
+            <p className="mt-2 max-w-2xl text-[13px] leading-relaxed text-zinc-400">{tab === 'calendario' ? 'Comprende el comportamiento histórico y detecta temporadas atípicas.' : tab === 'campo' ? 'Consulta información NRT almacenada, geocercas y verificaciones de campo.' : 'Explora focos detectados, filtra el territorio y orienta la verificación operativa.'}</p>
           </div>
-          <div className="rounded-xl border border-white/[0.08] bg-white/[0.025] px-4 py-2 text-[11px] text-zinc-400">
-            <span className="mr-2 inline-block h-1.5 w-1.5 rounded-full bg-zinc-400" /> Datos hasta <span className="font-medium tabular-nums text-zinc-200">{meta?.coverage.end || '—'}</span>
+          <div className="flex items-center gap-2 self-start rounded-full border border-emerald-400/20 bg-emerald-400/[0.06] px-3 py-1.5 text-[11px] text-emerald-200 sm:self-auto">
+            <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" /> Cobertura histórica hasta {meta?.coverage.end || '—'}
           </div>
         </div>
         <div aria-live="polite" className="sr-only">
