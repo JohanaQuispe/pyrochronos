@@ -93,6 +93,20 @@ def read_any(path: Path) -> pd.DataFrame:
         return pd.read_csv(fh, sep=sep, low_memory=False)
 
 
+def guess_source_from_name(name: str) -> int | None:
+    """Deduce el sensor por el nombre del archivo (MODIS_SP_historico, VIIRS_NOAA20_...)."""
+    text = name.lower()
+    if "modis" in text or "terra" in text or "aqua" in text:
+        return normalize.SOURCE_MODIS
+    if "viirs" in text or "snpp" in text or "noaa20" in text or "noaa21" in text or "jpss" in text:
+        return normalize.SOURCE_VIIRS
+    return None
+
+
+def source_label(value: int) -> str:
+    return "MODIS" if value == normalize.SOURCE_MODIS else "VIIRS"
+
+
 def resolve_targets(raw: str) -> tuple[list[Path], str]:
     """Acepta archivo, carpeta o un nombre sin extensión y devuelve qué leer."""
     path = Path(raw).expanduser()
@@ -214,8 +228,11 @@ def main() -> int:
     ap.add_argument("--file", required=True, help="ruta del CSV/XLSX/Parquet")
     ap.add_argument("--inspect", action="store_true", help="solo muestra qué hay (por defecto)")
     ap.add_argument("--write", action="store_true", help="escribe el parquet (hace copia del anterior)")
+    ap.add_argument("--source", default=None, choices=["modis", "viirs"],
+                    help="sensor a declarar si el archivo no trae columna de satélite")
     ap.add_argument("--dedupe", default="on", choices=["on", "off"], help="quitar duplicados día+punto+sensor")
     args = ap.parse_args()
+    args.source = {"modis": normalize.SOURCE_MODIS, "viirs": normalize.SOURCE_VIIRS}.get(args.source)
 
     paths, como = resolve_targets(args.file)
     if not paths:
@@ -238,6 +255,11 @@ def main() -> int:
             continue
         if len(paths) > 1:
             part["_origen"] = one.name
+        if "satellite" not in detect_columns(list(part.columns)):
+            guessed = guess_source_from_name(one.name)
+            if guessed is not None:
+                part["_sensor_por_nombre"] = source_label(guessed)
+                print(f"  sensor deducido del nombre: {source_label(guessed)}")
         partes.append(part)
     if not partes:
         print("ERROR: no se pudo leer ninguna fila.")
@@ -261,14 +283,36 @@ def main() -> int:
     else:
         origen = None
     cols = detect_columns(list(df.columns))
+    sensor_note = "columna del archivo"
+    if "satellite" not in cols and "_sensor_por_nombre" in df.columns:
+        cols["satellite"] = "_sensor_por_nombre"
+        sensor_note = "deducido del nombre de cada archivo"
+        print("Sensor: tomado del nombre de cada archivo.")
+    elif "satellite" not in cols and args.source:
+        sensor_note = f"declarado a mano como {source_label(args.source)} (no venía en el archivo)"
+        df["_sensor_declarado"] = source_label(args.source)
+        cols["satellite"] = "_sensor_declarado"
+        print(f"Sensor: declarado a mano como {source_label(args.source)} para TODAS las filas.")
+        print("  (no viene en el archivo: queda anotado así en dataset.json)")
+
     faltan = [f for f in REQUIRED if f not in cols]
     if faltan:
         print(f"\nERROR: no reconozco estas columnas: {faltan}")
-        print("Renombra las columnas así (o dime cómo se llaman y lo ajusto):")
-        print("  latitude / lat · longitude / lon · acq_date / fecha · satellite / satelite")
-        print(f"Detectadas: {cols}")
+        print("Lo que sí encontré:", cols if cols else "nada")
+        if "satellite" in faltan:
+            print("\nFalta el sensor (MODIS vs VIIRS). Tienes dos salidas:")
+            print("  a) importar los archivos por sensor (el nombre los delata):")
+            print("     python backend\\scripts\\import_clean.py --file \"...\\MODIS_SP_historico\" --inspect")
+            print("  b) declararlo a mano para todo el archivo, si de verdad es de un solo sensor:")
+            print("     --source modis   ó   --source viirs")
+        if any(f in faltan for f in ("lat", "lon", "date")):
+            print("Necesito ubicación y fecha. Nombres que reconozco:")
+            print("  latitude / latitud / lat · longitude / longitud / lon · acq_date / fecha / date")
         return 3
     print("Columnas reconocidas:", ", ".join(f"{k}={v}" for k, v in cols.items()))
+    if "frp" not in cols:
+        print("AVISO: el archivo no trae FRP. El calendario y las anomalías funcionan,")
+        print("       pero el indicador de FRP quedará en cero y el reporte lo dirá.")
 
     frame, report = build_frame(df, cols)
     if origen is not None:
@@ -305,6 +349,7 @@ def main() -> int:
 
     meta = {
         "source": f"importado de {path.name}",
+        "sensor_note": sensor_note,
         "rows_before_quality": int(len(frame)),
         "rows_after_quality": int(len(kept)),
         "imported_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
