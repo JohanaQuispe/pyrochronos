@@ -1,4 +1,4 @@
-.PHONY: datos api web build test boletin limpiar
+.PHONY: datos api web build test boletin bot limpiar
 
 datos:            ## normaliza los CSV crudos y construye el parquet
 	python backend/scripts/build_dataset.py --raw data/raw
@@ -17,6 +17,9 @@ test:
 
 boletin:          ## imprime el boletin (sin enviarlo)
 	python backend/scripts/notify_telegram.py --zone madrededios
+
+bot:              ## guia y diagnostico de la conexion con Telegram
+	python backend/scripts/telegram_setup.py
 
 limpiar:
 	rm -rf data/derived/*.parquet data/derived/dataset.json
