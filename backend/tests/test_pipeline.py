@@ -203,3 +203,48 @@ def test_csv_de_focos_cabeza_correcta(client):
     first = r.text.splitlines()[1].split(",")
     assert first[0].startswith("2024-")
     assert -18.5 <= float(first[1]) <= 0.5
+
+
+# --- semaforo de temporada y reporte ----------------------------------------
+def test_semaforo_responde_y_es_coherente(client):
+    r = client.get("/api/alert", params={"zone": "madrededios"})
+    assert r.status_code == 200
+    body = r.json()
+    assert body["level"] in ("normal", "vigilancia", "critico")
+    assert 0 <= body["severity"] <= 2
+    assert 1 <= body["week"] <= 53
+    assert body["reasons"] and body["action"] and body["disclaimer"]
+    assert len(body["window"]) == 4
+    assert all(0 <= w["ratio"] <= 1.01 for w in body["window"])
+
+
+def test_semaforo_en_plena_temporada_es_critico(client):
+    # Madre de Dios: el pico histórico está en septiembre; una referencia en esa semana debe dar crítico
+    r = client.get("/api/alert", params={"zone": "madrededios", "date_ref": "2026-09-08"})
+    assert r.status_code == 200
+    body = r.json()
+    assert body["level"] == "critico"
+    assert body["ratio"] > 0.75
+
+
+def test_semaforo_sin_recientes_lo_dice(client):
+    r = client.get("/api/recent", params={"zone": "peru"})
+    assert r.status_code == 200
+    if not r.json().get("available"):
+        assert r.json()["reason"]
+
+
+def test_reporte_ejecutivo_es_html_con_cifras(client):
+    r = client.get("/api/report", params={"zone": "madrededios"})
+    assert r.status_code == 200
+    assert r.headers["content-type"].startswith("text/html")
+    html = r.text
+    assert "Reporte ejecutivo" in html
+    assert "Cómo se armonizó" in html
+    assert "Imprimir / Guardar como PDF" in html
+    assert "NASA FIRMS" in html
+
+
+def test_reporte_rechaza_fechas_invertidas(client):
+    r = client.get("/api/report", params={"zone": "peru", "start": "2025-01-01", "end": "2010-01-01"})
+    assert r.status_code == 400

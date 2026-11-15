@@ -1,6 +1,6 @@
 // Exporta el calendario a PNG dibujando directamente en un canvas.
 // No depende del DOM: usa los mismos datos que la interfaz.
-import { MONTHS_SHORT, RAMP, bucketOf, fmt } from './scale'
+import { MONTHS_SHORT, bucketOf, fmt, rampOf } from './scale'
 
 const CELL_W = 26
 const CELL_H = 16
@@ -8,7 +8,8 @@ const LEFT = 54
 const TOP = 74
 const PAD = 18
 
-export function exportCalendarPng(data, fileName = 'pyrochronos_calendario.png') {
+export function exportCalendarPng(data, fileName = 'pyrochronos_calendario.png', palette = 'fuego') {
+  const RAMP = rampOf(palette)
   const cal = data.calendar
   const meta = data.meta
   const periods = meta.periods
