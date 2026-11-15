@@ -17,13 +17,13 @@ export default function TopBar({ meta, state, setState, years, onShortcut, downl
         : 'range'
 
   return (
-    <header className="sticky top-0 z-30 border-b border-white/[0.06] bg-ink/80 backdrop-blur-xl">
-      <div className="mx-auto flex h-14 max-w-[1500px] items-center gap-2 px-4">
+    <header className="sticky top-0 z-30 border-b border-white/[0.06] bg-[#090c12]/90 backdrop-blur-2xl">
+      <div className="mx-auto flex h-16 max-w-[1600px] items-center gap-2 px-4">
         <a href="/" className="flex items-center gap-2.5" aria-label="PyroChronos, inicio">
-          <img src="/logo.png" alt="" width="28" height="28" className="h-7 w-7 rounded-md" />
+          <img src="/logo.png" alt="" width="28" height="28" className="h-8 w-8 rounded-xl ring-1 ring-white/10" />
           <span className="leading-none">
-            <span className="block text-[14.5px] font-semibold tracking-tight text-white">PyroChronos</span>
-            <span className="hidden text-[10.5px] text-zinc-500 sm:block">MODIS + VIIRS armonizado</span>
+            <span className="block text-[15px] font-semibold tracking-tight text-white">PyroChronos</span>
+            <span className="hidden text-[10.5px] text-zinc-500 sm:block">FIRE INTELLIGENCE · PERÚ</span>
           </span>
         </a>
 
