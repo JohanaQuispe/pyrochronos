@@ -11,14 +11,16 @@ import AnomalyChart from './components/AnomalyChart.jsx'
 import MapPanel from './components/MapPanel.jsx'
 import HarmonizationPanel from './components/HarmonizationPanel.jsx'
 import BulletinCard from './components/BulletinCard.jsx'
+import FieldPanel from './components/FieldPanel.jsx'
 import { exportCalendarPng } from './lib/exportPng'
 import { fmt } from './lib/scale'
 
 const BASE = import.meta.env.VITE_API_BASE || ''
 
 const TABS = [
-  { key: 'calendario', label: 'Calendario histórico' },
-  { key: 'mapa', label: 'Mapa y alertas' },
+  { key: 'mapa', label: 'Monitoreo', hint: 'campo' },
+  { key: 'calendario', label: 'Histórico', hint: '2000–2025' },
+  { key: 'campo', label: 'Campo y Telegram' },
 ]
 
 export default function App() {
@@ -32,7 +34,7 @@ export default function App() {
   const [error, setError] = useState(null)
   const [loading, setLoading] = useState(true)
   const [hotLoading, setHotLoading] = useState(false)
-  const [tab, setTab] = useState('calendario')
+  const [tab, setTab] = useState('mapa')
   const [filtersOpen, setFiltersOpen] = useState(false)
   const reqId = useRef(0)
 
@@ -225,7 +227,15 @@ export default function App() {
         </div>
       </div>
 
-      <main id="main" className="mx-auto max-w-[1500px] px-4 pb-10 pt-4">
+      <main id="main" className="mx-auto max-w-[1500px] px-4 pb-10 pt-5 sm:px-6 lg:px-8">
+        <section className="mb-5 flex flex-col justify-between gap-3 border-b border-white/[0.07] pb-5 sm:flex-row sm:items-end">
+          <div>
+            <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.22em] text-orange-300">NASA FIRMS · MODIS + VIIRS</p>
+            <h1 className="text-2xl font-semibold tracking-tight text-white sm:text-3xl">Del dato satelital a la acción en campo.</h1>
+            <p className="mt-2 max-w-2xl text-[13px] leading-relaxed text-zinc-400">Una vista unificada para vigilar focos detectados, entender la temporada histórica y coordinar la verificación en terreno.</p>
+          </div>
+          <div className="flex items-center gap-2 self-start rounded-full border border-emerald-400/20 bg-emerald-400/[0.06] px-3 py-1.5 text-[11px] text-emerald-200 sm:self-auto"><span className="h-1.5 w-1.5 rounded-full bg-emerald-400"></span> Datos del repositorio · sin simulación</div>
+        </section>
         <div aria-live="polite" className="sr-only">
           {loading ? 'Calculando el calendario…' : data ? 'Calendario actualizado' : 'Sin datos'}
         </div>
@@ -244,7 +254,7 @@ export default function App() {
           </div>
         )}
 
-        {/* --- Pestaña 1: calendario ------------------------------------- */}
+        {/* --- Vista histórica ------------------------------------------- */}
         <div
           role="tabpanel"
           id="panel-calendario"
@@ -294,7 +304,7 @@ export default function App() {
           )}
         </div>
 
-        {/* --- Pestaña 2: mapa y alertas --------------------------------- */}
+        {/* --- Monitoreo táctico ----------------------------------------- */}
         <div
           role="tabpanel"
           id="panel-mapa"
@@ -329,6 +339,11 @@ export default function App() {
               </p>
             </section>
           </div>
+        </div>
+
+        <div role="tabpanel" id="panel-campo" aria-labelledby="tab-campo" hidden={tab !== 'campo'} className="space-y-3">
+          <FieldPanel zone={state?.zone} zoneParams={zoneParams} />
+          {state && state.zone !== 'custom' && <BulletinCard zone={state.zone} />}
         </div>
 
         <footer className="mt-6 flex flex-wrap items-center gap-x-4 gap-y-1 border-t border-white/[0.06] pt-4 text-[10.5px] text-zinc-600">
