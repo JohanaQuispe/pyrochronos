@@ -21,7 +21,10 @@ calendario de actividad de incendios, para que una persona pueda ver en menos de
 | Gráfico del año frente a la mediana con banda de percentiles 25–75 | funciona |
 | Descarga CSV de focos y CSV de la serie armonizada | funciona |
 | Resumen en lenguaje simple (plantillas, sin IA generativa) | funciona |
-| Boletín opcional por Telegram (script, token solo en el servidor) | funciona en simulación |
+| **Semáforo de temporada** (aviso anticipado con la historia de la zona) | funciona |
+| **Reporte ejecutivo imprimible** (PDF desde el navegador) | funciona |
+| Boletín y vigilancia automática por Telegram (token solo en el servidor) | funciona en simulación |
+| Modo reciente (NRT, latencia ~3 h) | implementado; requiere `FIRMS_MAP_KEY` y salida a internet |
 
 ## Cómo correrlo
 
@@ -59,12 +62,22 @@ python -m pytest backend/tests -q      # 14 pruebas: normalización, cuadrícula
 cd frontend && npm run smoke           # monta la interfaz en jsdom y comprueba que renderiza sin errores
 ```
 
-### Boletín por Telegram (opcional)
+### Semáforo de temporada y avisos (opcional)
 
 ```bash
+python backend/scripts/alert.py --zone madrededios          # semáforo en la terminal
 export TELEGRAM_BOT_TOKEN=... TELEGRAM_CHAT_ID=...
-python backend/scripts/notify_telegram.py --zone madrededios --send
+python backend/scripts/watch_alerts.py --zones peru,madrededios --send
 ```
+
+### Focos recientes (NRT, ~3 h de latencia)
+
+```bash
+export FIRMS_MAP_KEY=...
+python backend/scripts/download_recent.py --zone madrededios --days 3
+```
+
+Detalles, reglas y límites en [`docs/alertas.md`](docs/alertas.md).
 
 ## Arquitectura por capas
 
@@ -85,6 +98,7 @@ tipos de fuente excluidos, ventana de solape, umbrales de anomalía, límites de
 ## Documentación
 
 - [`docs/metodologia.md`](docs/metodologia.md) — cómo se armoniza, con fórmulas y límites.
+- [`docs/alertas.md`](docs/alertas.md) — semáforo de temporada, modo reciente y avisos por Telegram.
 - [`docs/procedencia.md`](docs/procedencia.md) — de dónde salen los datos, con fechas y hashes.
 - [`docs/ia.md`](docs/ia.md) — declaración de uso de IA.
 - [`docs/pitch.md`](docs/pitch.md) — guion de 3 minutos y cómo hacer la demo.

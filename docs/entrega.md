@@ -12,11 +12,14 @@
 
 ## 2. Lo que falta hacer a mano (30-45 min)
 
+0. **Probar el semáforo**: abre "Qué hacer" y pon una fecha de referencia en septiembre (Madre de Dios)
+   para mostrar la ventana crítica. Vuelve con "Volver a la semana actual" antes de seguir.
 1. **Subir el repositorio a GitHub público** (o ponerlo público si ya está).
    Verifica que `.env` **no** esté en el repo y que la licencia se vea en la portada.
 2. **Grabar el video de 3 minutos** siguiendo `docs/pitch.md`:
    - Graba la pantalla con la app abierta y en zona Perú.
-   - Muestra: calendario → "Cómo se armonizó" → septiembre de 2024 → cambiar de zona → descargar CSV.
+   - Muestra: semáforo → calendario → "Cómo se armonizó" → septiembre de 2024 → cambiar de zona →
+     descargar CSV y abrir el reporte ejecutivo.
    - Si no quieres hablar de corrido, lee el guion: está escrito para 3 minutos.
 3. **Escribir el texto de la propuesta** con: problema, qué construimos, cómo se armoniza,
    qué está validado y qué no. Puedes copiar de `README.md` y `docs/metodologia.md`.

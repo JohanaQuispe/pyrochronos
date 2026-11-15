@@ -16,13 +16,16 @@ import numpy as np
 import pandas as pd
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, StreamingResponse
+from fastapi.responses import FileResponse, HTMLResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from pyro.calendar import build_calendar, hotspots_geojson  # noqa: E402
 from pyro.notify import build_bulletin  # noqa: E402
+from pyro.alerts import build_alert  # noqa: E402
+from pyro.report import build_report_html  # noqa: E402
+from pyro import nrt  # noqa: E402
 from pyro.config import ROOT, load_config  # noqa: E402
 from pyro.store import Dataset, load_dataset  # noqa: E402
 from pyro.summary import MONTHS  # noqa: E402
@@ -258,6 +261,50 @@ def csv_series(
         media_type="text/csv; charset=utf-8",
         headers={"Content-Disposition": f'attachment; filename="{fname}"'},
     )
+
+
+@app.get("/api/alert")
+def alert(zone: str | None = None, bbox: str | None = None, date_ref: str | None = None, weeks: int = 4):
+    """Semaforo de temporada de la zona (anticipatorio, con la historia de esa zona)."""
+    ds = dataset()
+    bb, name = resolve_zone(zone, bbox)
+    ref = parse_date(date_ref, None) if date_ref else None
+    if weeks < 1 or weeks > 12:
+        raise HTTPException(400, "weeks debe estar entre 1 y 12")
+    out = _alert_cached(bb, name, ref.isoformat() if ref else None, int(weeks))
+    return out
+
+
+def _alert_cached(bb, zone_name, ref_iso, weeks):
+    from datetime import date as _date
+
+    return build_alert(cfg, dataset(), bb, zone_name,
+                       reference_date=_date.fromisoformat(ref_iso) if ref_iso else None,
+                       lookahead_weeks=weeks)
+
+
+@app.get("/api/recent")
+def recent(zone: str | None = None, bbox: str | None = None):
+    """Estado de los datos recientes (NRT) cargados. Si no hay, se dice claramente."""
+    bb, _ = resolve_zone(zone, bbox)
+    return nrt.stats(cfg, bb)
+
+
+@app.get("/api/report")
+def report(zone: str | None = None, bbox: str | None = None, start: str | None = None, end: str | None = None):
+    """Reporte ejecutivo imprimible (Guardar como PDF desde el navegador)."""
+    ds = dataset()
+    bb, name = resolve_zone(zone, bbox)
+    s = parse_date(start, ds.start)
+    e = parse_date(end, ds.end)
+    if s < ds.start:
+        s = ds.start
+    if e > ds.end:
+        e = ds.end
+    if s > e:
+        raise HTTPException(400, "rango de fechas invalido")
+    html = build_report_html(cfg, ds, bb, name, s, e)
+    return HTMLResponse(html)
 
 
 @app.get("/api/bulletin")

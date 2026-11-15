@@ -135,8 +135,8 @@ export default function MapPanel({ bbox, hotspots, meta, onBBoxChange, loading }
   }
 
   return (
-    <section className="card flex h-full min-h-[360px] flex-col overflow-hidden" aria-labelledby="map-title">
-      <div className="flex items-center justify-between gap-2 px-3 py-2">
+    <section className="card flex h-full min-h-[380px] flex-col overflow-hidden" aria-labelledby="map-title">
+      <div className="flex items-center justify-between gap-2 px-3 pt-2">
         <h2 id="map-title" className="text-sm font-semibold text-white">Zona de interés</h2>
         <button
           type="button"
@@ -144,7 +144,29 @@ export default function MapPanel({ bbox, hotspots, meta, onBBoxChange, loading }
           onClick={() => setDrawing((d) => !d)}
           aria-pressed={drawing}
         >
-          {drawing ? 'Suelta y arrastra en el mapa…' : 'Dibujar zona'}
+          {drawing ? 'Arrastra en el mapa…' : 'Dibujar zona'}
+        </button>
+      </div>
+
+      <div className="flex items-end gap-1 px-3 pb-2">
+        {[['w', 'O'], ['s', 'S'], ['e', 'E'], ['n', 'N']].map(([key, text]) => (
+          <label key={key} className="flex-1 text-[9.5px] text-mist">
+            <span className="sr-only">
+              {key === 'w' ? 'Oeste' : key === 's' ? 'Sur' : key === 'e' ? 'Este' : 'Norte'}
+            </span>
+            <span aria-hidden="true" className="mb-0.5 block">{text}</span>
+            <input
+              type="number"
+              step="0.01"
+              aria-label={key === 'w' ? 'Oeste' : key === 's' ? 'Sur' : key === 'e' ? 'Este' : 'Norte'}
+              className="w-full rounded border border-line bg-panelHi px-1 py-0.5 text-[10.5px] tabular-nums text-slate-100"
+              value={coords[key]}
+              onChange={(e) => setCoords((c) => ({ ...c, [key]: e.target.value }))}
+            />
+          </label>
+        ))}
+        <button type="button" className="btn shrink-0 px-1.5 py-1 text-[10.5px]" onClick={applyCoords} title="Aplicar coordenadas">
+          Aplicar
         </button>
       </div>
 
@@ -157,42 +179,19 @@ export default function MapPanel({ bbox, hotspots, meta, onBBoxChange, loading }
         )}
       </div>
 
-      <div className="border-t border-line px-3 py-2">
-        <div className="grid grid-cols-4 gap-1.5">
-          {[['w', 'Oeste'], ['s', 'Sur'], ['e', 'Este'], ['n', 'Norte']].map(([key, text]) => (
-            <label key={key} className="text-[10px] text-mist">
-              {text}
-              <input
-                type="number"
-                step="0.01"
-                className="mt-0.5 w-full rounded border border-line bg-panelHi px-1.5 py-1 text-[11px] tabular-nums text-slate-100"
-                value={coords[key]}
-                onChange={(e) => setCoords((c) => ({ ...c, [key]: e.target.value }))}
-              />
-            </label>
-          ))}
-        </div>
-        <div className="mt-1.5 flex items-center justify-between gap-2">
-          <p className="text-[10.5px] text-mist">
-            {hotspots
-              ? `${fmt(hotspots.meta.shown)} de ${fmt(hotspots.meta.total)} focos dibujados${
-                  hotspots.meta.sampled ? ' (muestra)' : ''
-                }`
-              : 'Sin focos'}
-          </p>
-          <button type="button" className="btn px-2 py-1 text-[11px]" onClick={applyCoords}>
-            Aplicar coordenadas
-          </button>
-        </div>
-        <div className="mt-1 flex items-center gap-3 text-[10.5px] text-mist">
-          <span className="flex items-center gap-1">
-            <span className="inline-block h-2 w-2 rounded-full bg-[#ff6b1a]" aria-hidden="true" /> MODIS
-          </span>
-          <span className="flex items-center gap-1">
-            <span className="inline-block h-2 w-2 rounded-full bg-[#ffd166]" aria-hidden="true" /> VIIRS
-          </span>
-          <span className="ml-auto">{meta?.cell_deg}° ≈ 1,1 km por celda</span>
-        </div>
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 border-t border-line px-3 py-1.5 text-[10.5px] text-mist">
+        <span className="flex items-center gap-1">
+          <span className="inline-block h-2 w-2 rounded-full bg-[#ff6b1a]" aria-hidden="true" /> MODIS
+        </span>
+        <span className="flex items-center gap-1">
+          <span className="inline-block h-2 w-2 rounded-full bg-[#ffd166]" aria-hidden="true" /> VIIRS
+        </span>
+        <span>
+          {hotspots
+            ? `${fmt(hotspots.meta.shown)} de ${fmt(hotspots.meta.total)} focos${hotspots.meta.sampled ? ' (muestra)' : ''}`
+            : 'Sin focos'}
+        </span>
+        <span className="ml-auto">{meta?.cell_deg}° ≈ 1,1 km por celda</span>
       </div>
     </section>
   )

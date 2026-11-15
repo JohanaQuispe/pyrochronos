@@ -3,7 +3,7 @@ import { MONTHS, MONTHS_SHORT, colorOf, fmt, legendSteps } from '../lib/scale'
 
 const LEVEL_GLYPH = { alto: '▲', extremo: '◆' }
 
-export default function CalendarHeatmap({ data, onPickYear }) {
+export default function CalendarHeatmap({ data, onPickYear, palette = 'fuego' }) {
   const [tip, setTip] = useState(null)
   const gridRef = useRef(null)
   const meta = data.meta
@@ -132,7 +132,7 @@ export default function CalendarHeatmap({ data, onPickYear }) {
                 const level = cal.levels[yi][xi]
                 const estimated = cal.estimated[yi][xi]
                 const isNull = value === null
-                const color = colorOf(value, max)
+                const color = colorOf(value, max, palette)
                 return (
                   <button
                     key={`${year}-${p}`}
@@ -174,7 +174,7 @@ export default function CalendarHeatmap({ data, onPickYear }) {
 
       <div className="mt-2 flex flex-wrap items-center gap-2 text-[10.5px] text-mist">
         <span className="mr-1">Menos actividad</span>
-        {legendSteps(max).map((s) => (
+        {legendSteps(max, palette).map((s) => (
           <span key={s.color} className="flex items-center gap-1">
             <span className="inline-block h-3 w-4 rounded-[2px]" style={{ backgroundColor: s.color }} aria-hidden="true" />
             <span className="tabular-nums">{fmt(s.from)}–{fmt(s.to)}</span>

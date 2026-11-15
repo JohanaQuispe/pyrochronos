@@ -40,6 +40,13 @@ global.fetch = async (url) => {
   const body = url.includes('/api/meta') ? meta
     : url.includes('/api/hotspots') ? hotspots
       : url.includes('/api/bulletin') ? { text: 'boletin de prueba', zone: 'Peru', note: '' }
+        : url.includes('/api/alert') ? {
+          available: true, level: 'critico', severity: 2, label: 'Ventana crítica', short: 'Actividad histórica máxima',
+          action: 'Activa vigilancia diaria.', reasons: ['Referencia: semana 36.', 'Pico en la semana 36.', 'Se espera 100 % del pico.'],
+          reference_date: '2026-09-08', week: 36, peak_week: 36, ratio: 1.0,
+          window: [{ week: 36, expected: 100, ratio: 1, in_peak: true }, { week: 37, expected: 80, ratio: 0.8, in_peak: true }],
+          recent: { available: false }, disclaimer: 'No es un pronóstico.',
+        }
         : calendar
   return { ok: true, status: 200, json: async () => body }
 }
@@ -75,7 +82,8 @@ const checks = [
   ['calendario montado', html.includes('Calendario de actividad')],
   ['mapa montado', html.includes('leaflet-container')],
   ['resumen en una frase', html.includes('En una frase')],
-  ['descargas', html.includes('CSV de focos')],
+  ['descargas', html.includes('Descargar CSV de focos') || html.includes('Reporte ejecutivo')],
+  ['semaforo', html.includes('Ventana cr')],
   ['fetch llamado', calls >= 3],
 ]
 let failed = 0

@@ -12,3 +12,8 @@ data/raw/
 # artefactos
 .pytest_cache/
 *.log
+
+# estado de ejecucion (semaforo, avisos enviados)
+data/derived/alert_state.json
+data/derived/recent.parquet
+data/derived/recent.json
