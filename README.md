@@ -62,6 +62,12 @@ python -m pytest backend/tests -q      # 53 pruebas: normalización, armonizaci�
 cd frontend && npm run smoke           # monta la interfaz en jsdom y comprueba que renderiza sin errores
 ```
 
+### ¿No funciona algo? Un solo comando
+
+```bash
+python backend/scripts/doctor.py     # dice qué falta y cuál es el siguiente paso
+```
+
 ### Semáforo de temporada y avisos (opcional)
 
 ```bash

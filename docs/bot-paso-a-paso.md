@@ -5,7 +5,18 @@ Si algo falla, al final está la sección **Problemas y arreglos**.
 
 ---
 
-## 0. Antes de empezar (5 min)
+## 0. Revisión automática (30 segundos)
+
+Si algo no funciona y no sabes qué falta, ejecuta **un solo comando**:
+
+```bash
+python backend/scripts/doctor.py
+```
+
+Revisa dependencias, datos, `.env`, el bot, los focos recientes, POWER y la API, y termina con
+`SIGUIENTE PASO → …`. Nunca imprime una clave completa.
+
+## 0.b Antes de empezar (5 min)
 
 | Qué | Comando | Qué debes ver |
 |---|---|---|
