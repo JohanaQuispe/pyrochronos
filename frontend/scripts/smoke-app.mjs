@@ -40,6 +40,7 @@ global.fetch = async (url) => {
   calls += 1
   urls.push(String(url))
   const body = url.includes('/api/meta') ? meta
+    : url.includes('/api/assistant') ? { answer: 'No hay datos recientes cargados; verifica en campo.' }
     : url.includes('/api/recent/hotspots') ? { type: 'FeatureCollection', features: [], meta: { available: false, total: 0, shown: 0, sampled: false } }
     : url.includes('/api/hotspots') ? hotspots
       : url.includes('/api/bulletin') ? { text: 'boletin de prueba', zone: 'Peru', note: '' }
@@ -113,6 +114,10 @@ sensor.value = 'viirs'
 sensor.dispatchEvent(new dom.window.Event('change', { bubbles: true }))
 await new Promise((r) => setTimeout(r, 100))
 checks.push(['filtro VIIRS en petición', urls.some((url) => url.includes('/api/recent/hotspots') && url.includes('sources=viirs'))])
+const questionButton = [...root.querySelectorAll('button')].find((button) => button.textContent === '¿Hay focos recientes?')
+questionButton.click()
+await new Promise((r) => setTimeout(r, 100))
+checks.push(['consulta del asistente', root.textContent.includes('No hay datos recientes cargados; verifica en campo.') && urls.some((url) => url.includes('/api/assistant'))])
 let failed = 0
 for (const [name, ok] of checks) {
   console.log(`${ok ? 'ok  ' : 'FALLO'} ${name}`)

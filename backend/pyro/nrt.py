@@ -12,6 +12,8 @@ Si no hay datos recientes cargados, todo el sistema funciona igual: la web lo di
 from __future__ import annotations
 
 import json
+import os
+import uuid
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 
@@ -23,7 +25,7 @@ from . import normalize as nz
 from .config import Config, env
 
 MAX_DAYS_PER_QUERY = 5
-NRT_SOURCES = ("VIIRS_SNPP_NRT", "VIIRS_NOAA20_NRT", "MODIS_NRT")
+NRT_SOURCES = ("VIIRS_NOAA20_NRT", "VIIRS_NOAA21_NRT", "MODIS_NRT")
 
 
 def redact(text: str, key: str | None = None) -> str:
@@ -57,6 +59,7 @@ def fetch_recent(
     days: int = 3,
     sources: tuple[str, ...] = NRT_SOURCES,
     pause: float = 1.0,
+    strict: bool = False,
 ) -> pd.DataFrame:
     """Descarga los focos de los ultimos `days` dias y los devuelve ya normalizados."""
     key = env("FIRMS_MAP_KEY")
@@ -65,7 +68,7 @@ def fetch_recent(
     if not 1 <= days <= 10:
         raise ValueError("days debe estar entre 1 y 10")
 
-    end = date.today()
+    end = datetime.now(timezone.utc).date()
     start = end - timedelta(days=days - 1)
     area = f"{bbox[0]},{bbox[1]},{bbox[2]},{bbox[3]}"
     frames: list[pd.DataFrame] = []
@@ -77,13 +80,23 @@ def fetch_recent(
             url = f"https://firms.modaps.eosdis.nasa.gov/api/area/csv/{key}/{source}/{area}/{chunk}/{cursor.isoformat()}"
             try:
                 resp = requests.get(url, timeout=120)
-            except Exception as exc:
-                print(f"  aviso: {source} {cursor} -> {redact(str(exc), key)}")
+            except requests.RequestException as exc:
+                message = f"{source} {cursor}: {redact(str(exc), key)}"
+                if strict:
+                    raise RuntimeError(message) from None
+                print(f"  aviso: {message}")
                 break
             if resp.status_code != 200 or "Invalid MAP_KEY" in resp.text[:200]:
-                print(f"  aviso: {source} {cursor} -> HTTP {resp.status_code} {redact(resp.text[:120], key)}")
+                message = f"{source} {cursor}: HTTP {resp.status_code} {redact(resp.text[:120], key)}"
+                if strict:
+                    raise RuntimeError(message)
+                print(f"  aviso: {message}")
                 break
             text = resp.text.strip()
+            if strict:
+                headers = {h.strip().lower() for h in text.splitlines()[0].split(",")} if text else set()
+                if not {"latitude", "longitude", "acq_date", "confidence", "frp"}.issubset(headers):
+                    raise RuntimeError(f"{source} {cursor}: respuesta FIRMS sin cabecera CSV válida")
             if not text or len(text.splitlines()) <= 1:
                 cursor += timedelta(days=chunk)
                 continue
@@ -101,27 +114,40 @@ def fetch_recent(
     return df.drop_duplicates(subset=["day", "lat", "lon", "source"]).reset_index(drop=True)
 
 
-def save_recent(cfg: Config, df: pd.DataFrame, sources: tuple[str, ...], days: int) -> dict:
+def save_recent(cfg: Config, df: pd.DataFrame, sources: tuple[str, ...], days: int,
+                bbox: tuple[float, float, float, float] | None = None) -> dict:
     path = recent_path(cfg)
     path.parent.mkdir(parents=True, exist_ok=True)
-    df.to_parquet(path, index=False, compression="zstd")
+    temp_data = path.with_name(f".{path.name}.{uuid.uuid4().hex}.tmp")
+    temp_meta = meta_path(cfg).with_name(f".{meta_path(cfg).name}.{uuid.uuid4().hex}.tmp")
     meta = {
         "fetched_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
         "rows": int(len(df)),
         "days": int(days),
         "sources": list(sources),
+        "bbox": list(bbox) if bbox is not None else None,
         "first_day": str((date(1970, 1, 1) + timedelta(days=int(df["day"].min()))).isoformat()) if len(df) else None,
         "last_day": str((date(1970, 1, 1) + timedelta(days=int(df["day"].max()))).isoformat()) if len(df) else None,
     }
-    meta_path(cfg).write_text(json.dumps(meta, indent=2, ensure_ascii=False), encoding="utf-8")
+    try:
+        df.to_parquet(temp_data, index=False, compression="zstd")
+        temp_meta.write_text(json.dumps(meta, indent=2, ensure_ascii=False), encoding="utf-8")
+        os.replace(temp_data, path)
+        os.replace(temp_meta, meta_path(cfg))
+    finally:
+        temp_data.unlink(missing_ok=True)
+        temp_meta.unlink(missing_ok=True)
     return meta
 
 
 def stats(cfg: Config, bbox: tuple[float, float, float, float]) -> dict:
     """Resumen de los datos recientes dentro de una zona (o "no disponible")."""
     df, meta = load_recent(cfg)
-    if df is None or df.empty:
+    if df is None:
         return {"available": False, "reason": "No hay datos recientes cargados.", "meta": meta}
+    if df.empty:
+        return {"available": True, "empty": True, "total": 0, "meta": meta,
+                "reason": "La última descarga guardada no contiene detecciones; revisa su fecha y cobertura."}
     mask = ((df["lat"] >= bbox[1]) & (df["lat"] <= bbox[3])
             & (df["lon"] >= bbox[0]) & (df["lon"] <= bbox[2]))
     sub = df.loc[mask]

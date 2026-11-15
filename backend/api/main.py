@@ -178,12 +178,13 @@ def recent_hotspots(
         return {"type": "FeatureCollection", "features": [],
                 "meta": {"available": df is not None, "total": 0, "shown": 0,
                          "sampled": False, "fetched_at": info.get("fetched_at"),
-                         "first_day": info.get("first_day"), "last_day": info.get("last_day")}}
+                         "first_day": info.get("first_day"), "last_day": info.get("last_day"), "bbox": info.get("bbox")}}
     ds = Dataset(df=df, generated_at="", source_version="nrt")
     payload = hotspots_geojson(ds, bb, ds.start, ds.end, sources,
                                int(cfg.api["max_hotspots_geojson"]), conf_min)
     payload["meta"].update({"available": True, "fetched_at": info.get("fetched_at"),
-                            "first_day": info.get("first_day"), "last_day": info.get("last_day")})
+                            "first_day": info.get("first_day"), "last_day": info.get("last_day"),
+                            "bbox": info.get("bbox")})
     return payload
 
 
@@ -367,7 +368,22 @@ def climate_context(zone: str | None = None, date_ref: str | None = None):
 # --- capa de campo (geocercas, validacion humana) ----------------------------
 from pydantic import BaseModel, Field  # noqa: E402
 
-from pyro import geofence, groundtruth  # noqa: E402
+from pyro import assistant, geofence, groundtruth  # noqa: E402
+
+
+class AssistantQuestion(BaseModel):
+    question: str = Field(min_length=1, max_length=500)
+    zone: str | None = None
+    bbox: str | None = None
+
+
+@app.post("/api/assistant")
+def ask_assistant(body: AssistantQuestion):
+    if not body.question.strip():
+        raise HTTPException(400, "Escribe una pregunta")
+    bb, name = resolve_zone(body.zone, body.bbox)
+    return {"answer": assistant.answer_question(body.question, cfg, dataset(), bb, name),
+            "type": "respuestas_acotadas"}
 
 
 @app.get("/api/historical-grid")

@@ -12,6 +12,7 @@ import MapPanel from './components/MapPanel.jsx'
 import HarmonizationPanel from './components/HarmonizationPanel.jsx'
 import BulletinCard from './components/BulletinCard.jsx'
 import FieldPanel from './components/FieldPanel.jsx'
+import AssistantPanel from './components/AssistantPanel.jsx'
 import { exportCalendarPng } from './lib/exportPng'
 import { fmt } from './lib/scale'
 
@@ -34,6 +35,7 @@ export default function App() {
   const [mapLayer, setMapLayer] = useState('history')
   const [mapSource, setMapSource] = useState('both')
   const [highConfidence, setHighConfidence] = useState(false)
+  const [recentTick, setRecentTick] = useState(0)
   const [mapError, setMapError] = useState(null)
   const [error, setError] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -133,6 +135,13 @@ export default function App() {
     return () => ctrl.abort()
   }, [state, activeBBox, zoneParams, dateRef])
 
+  // La capa NRT se relee del servidor; esta consulta no descarga datos de FIRMS.
+  useEffect(() => {
+    if (mapLayer !== 'recent') return undefined
+    const timer = setInterval(() => setRecentTick((tick) => tick + 1), 60000)
+    return () => clearInterval(timer)
+  }, [mapLayer])
+
   // focos del mapa
   useEffect(() => {
     if (!state || !activeBBox) return undefined
@@ -154,7 +163,7 @@ export default function App() {
       }
     })
     return () => ctrl.abort()
-  }, [state, activeBBox, zoneParams, mapLayer, mapSource, highConfidence])
+  }, [state, activeBBox, zoneParams, mapLayer, mapSource, highConfidence, recentTick])
 
   const onBBoxChange = useCallback((bbox) => setState((s) => ({ ...s, zone: 'custom', bbox })), [])
 
@@ -338,6 +347,7 @@ export default function App() {
           </div>
 
           <div className="space-y-3">
+            <AssistantPanel zoneParams={zoneParams} zoneName={zoneName} />
             <AlertStrip alert={alert} loading={alertLoading} dateRef={dateRef} setDateRef={setDateRef} zoneName={zoneName} />
             <ClimateCard zone={state?.zone} />
             {state && state.zone !== 'custom' && <BulletinCard zone={state.zone} />}

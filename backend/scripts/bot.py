@@ -18,6 +18,7 @@ PERSONA y los avisos se envían al chat donde compartió la ubicación.
 from __future__ import annotations
 
 import argparse
+from datetime import datetime, timedelta, timezone
 import re
 import sys
 import time
@@ -27,7 +28,7 @@ import requests
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from pyro import geofence, groundtruth, nrt  # noqa: E402
+from pyro import assistant, geofence, groundtruth, nrt  # noqa: E402
 from pyro.config import Config, env, load_config  # noqa: E402
 from pyro.store import Dataset, load_dataset  # noqa: E402
 
@@ -39,8 +40,8 @@ DEFAULT_RADIUS = 10.0
 
 WELCOME = (
     "*PyroChronos · apoyo a la brigada*\n"
-    "Te aviso cuando el satélite detecte un fuego intenso cerca de ti, para que puedas confirmarlo "
-    "antes de salir.\n\n"
+    "Puedo avisar de focos de calor con FRP elevado cerca de ti si hay datos recientes cargados "
+    "y estoy funcionando. Una detección no confirma un incendio.\n\n"
     "1️⃣ Pulsa *📍 Compartir mi ubicación* (una sola vez).\n"
     "2️⃣ Cuando llegue un aviso, dime qué era con los botones.\n"
     "3️⃣ Si quieres avisos más lejos o más cerca, pulsa *⚙️ Distancia de aviso*.\n\n"
@@ -65,13 +66,17 @@ class Telegram:
         self.token = token
 
     def call(self, method: str, **params) -> dict:
-        r = requests.post(API.format(token=self.token, method=method), json=params, timeout=30)
+        try:
+            r = requests.post(API.format(token=self.token, method=method), json=params, timeout=30)
+        except requests.RequestException:
+            raise RuntimeError(f"Telegram {method}: error de conexión") from None
         try:
             body = r.json()
         except ValueError:
             body = {"ok": False, "description": f"HTTP {r.status_code} sin JSON"}
         if not body.get("ok"):
-            raise RuntimeError(f"Telegram {method}: {body.get('description', 'error')}")
+            description = str(body.get('description', 'error')).replace(self.token, '***')
+            raise RuntimeError(f"Telegram {method}: {description}")
         return body.get("result", {})
 
     def text(self, chat_id, text: str, keyboard: dict | None = None) -> dict:
@@ -183,23 +188,20 @@ def register_location(cfg: Config, tg: Telegram, msg: dict) -> None:
 def show_state(cfg: Config, tg: Telegram, chat_id, user_id) -> None:
     fences = groundtruth.load_geofences(cfg)
     mine = fences.get(str(user_id))
-    recent, _ = nrt.load_recent(cfg)
+    recent, meta = nrt.load_recent(cfg)
     summary = groundtruth.verdict_summary(cfg)
     lines = ["*Tu estado*"]
-    if mine:
+    if mine and mine.get('lat') is not None and mine.get('lon') is not None:
         lines.append(f"📍 Estás en: {mine['lat']:.4f}, {mine['lon']:.4f}")
         lines.append(f"📏 Te aviso hasta *{mine['radius_km']:.0f} km* a la redonda")
     else:
         lines.append("📍 Todavía no sé dónde estás: pulsa *Compartir mi ubicación*.")
     if recent is None:
-        lines.append("🔥 Fuegos recientes: *sin datos cargados ahora mismo*")
+        lines.append("Focos recientes: sin datos cargados; esto no significa ausencia de focos.")
     else:
-        lines.append(f"🔥 Fuegos recientes cargados: {len(recent)}")
-        if mine:
-            marked = geofence.mark_critical(recent)
-            near = geofence.nearest(marked, mine["lat"], mine["lon"], mine["radius_km"], limit=50)
-            lines.append(f"🚨 Focos que te avisaría ahora: *{len(near)}*")
-    lines.append(f"✅ Confirmaciones que hiciste: {summary['total']}")
+        lines.append(f"Focos en el archivo NRT: {len(recent)}; descarga: {meta.get('fetched_at') or 'fecha desconocida'}.")
+        lines.append("El archivo puede estar desactualizado; no confirma incendios.")
+    lines.append(f"✅ Confirmaciones registradas en el equipo: {summary['total']}")
     for code, count in summary["counts"].items():
         if count:
             lines.append(f"   {geofence.VERDICTS[code]}: {count}")
@@ -246,7 +248,8 @@ def handle_message(cfg: Config, tg: Telegram, msg: dict, dataset: Dataset, zone:
     if text.startswith("/estado") or "estado" in text:
         show_state(cfg, tg, chat_id, user_id)
         return
-    tg.text(chat_id, "No entendí. Usa los botones de abajo 👇", main_keyboard())
+    reply = assistant.answer_question(raw, cfg, dataset, cfg.zone_bbox(zone), cfg.zone_name(zone))
+    tg.text(chat_id, reply, main_keyboard())
 
 
 def handle_callback(cfg: Config, tg: Telegram, cb: dict) -> None:
@@ -290,13 +293,39 @@ def handle_callback(cfg: Config, tg: Telegram, cb: dict) -> None:
         tg.text(chat_id, f"✅ Guardado: *{label}*\nConfirmaciones en el equipo: {summary['total']}")
 
 
+def fresh_for_zone(meta: dict, bbox, now: datetime | None = None) -> bool:
+    """No enviar un archivo antiguo, sin fecha o de una zona distinta como alerta nueva."""
+    now = now or datetime.now(timezone.utc)
+    try:
+        fetched = datetime.fromisoformat(meta['fetched_at'].replace('Z', '+00:00'))
+        if fetched.tzinfo is None:
+            return False
+        age = now - fetched.astimezone(timezone.utc)
+        w, s, e, n = (float(x) for x in meta['bbox'])
+        return timedelta(0) <= age <= timedelta(hours=6) and w <= bbox[0] and s <= bbox[1] and e >= bbox[2] and n >= bbox[3]
+    except (KeyError, TypeError, ValueError, OverflowError):
+        return False
+
+
+def refresh_recent(cfg: Config, zone: str) -> dict:
+    """Solo reemplaza la descarga tras obtener todas las fuentes sin error."""
+    bbox = cfg.zone_bbox(zone)
+    df = nrt.fetch_recent(cfg, bbox, days=3, sources=nrt.NRT_SOURCES, strict=True)
+    return nrt.save_recent(cfg, df, nrt.NRT_SOURCES, 3, bbox=bbox)
+
+
 def check_alerts(cfg: Config, tg: Telegram, zone: str, dataset: Dataset) -> int:
-    """Revisa focos recientes y avisa a cada persona según su distancia."""
-    recent, _meta = nrt.load_recent(cfg)
-    if recent is None or recent.empty:
+    """Avisa solo detecciones recientes y archivos frescos con cobertura conocida."""
+    recent, meta = nrt.load_recent(cfg)
+    bbox = cfg.zone_bbox(zone)
+    if recent is None or recent.empty or not fresh_for_zone(meta, bbox):
         return 0
-    w, s, e, n = cfg.zone_bbox(zone)
-    inside = recent[(recent["lat"] >= s) & (recent["lat"] <= n) & (recent["lon"] >= w) & (recent["lon"] <= e)]
+    w, s, e, n = bbox
+    today = datetime.now(timezone.utc).date()
+    epoch = datetime(1970, 1, 1, tzinfo=timezone.utc).date()
+    latest_day = (today - epoch).days
+    inside = recent[(recent["lat"] >= s) & (recent["lat"] <= n) & (recent["lon"] >= w) & (recent["lon"] <= e)
+                    & (recent["day"] >= latest_day - 2) & (recent["day"] <= latest_day)]
     if inside.empty:
         return 0
     hist = zone_hotspots(cfg, dataset, zone)
@@ -306,7 +335,7 @@ def check_alerts(cfg: Config, tg: Telegram, zone: str, dataset: Dataset) -> int:
     ]
     sent = 0
     for fence in groundtruth.active_geofences(cfg):
-        if not fence.get("lat"):
+        if fence.get("lat") is None or fence.get("lon") is None:
             continue
         target = str(fence.get("chat_id") or fence["telegram_id"])
         hits = geofence.nearest(marked, fence["lat"], fence["lon"], fence.get("radius_km", DEFAULT_RADIUS))
@@ -325,7 +354,8 @@ def check_alerts(cfg: Config, tg: Telegram, zone: str, dataset: Dataset) -> int:
     return sent
 
 
-def poll(cfg: Config, tg: Telegram, dataset: Dataset, zone: str, interval: int, once: bool) -> int:
+def poll(cfg: Config, tg: Telegram, dataset: Dataset, zone: str, interval: int, once: bool,
+         auto_refresh: bool = False) -> int:
     try:
         tg.call("setMyCommands", commands=[
             {"command": "start", "description": "Empezar y compartir mi ubicación"},
@@ -359,11 +389,14 @@ def poll(cfg: Config, tg: Telegram, dataset: Dataset, zone: str, interval: int, 
                 print(f"update ignorado: {exc}", file=sys.stderr)
         if time.time() - last_check >= interval:
             try:
+                if auto_refresh:
+                    info = refresh_recent(cfg, zone)
+                    print(f"Datos FIRMS actualizados: {info['rows']} detecciones; fecha UTC {info['fetched_at']}")
                 sent = check_alerts(cfg, tg, zone, dataset)
                 if sent:
                     print(f"{sent} aviso(s) enviados")
             except Exception as exc:
-                print(f"no pude revisar focos: {exc}", file=sys.stderr)
+                print(f"No pude actualizar o revisar focos; no se envían alertas en este ciclo: {nrt.redact(str(exc))}", file=sys.stderr)
             last_check = time.time()
         if once:
             return 0
@@ -376,8 +409,14 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--send-demo", action="store_true", help="envía el ejemplo marcado como DEMO")
     ap.add_argument("--poll", action="store_true", help="escucha mensajes y avisa")
     ap.add_argument("--once", action="store_true", help="una sola pasada y sale")
-    ap.add_argument("--interval", type=int, default=300, help="segundos entre revisiones de focos")
+    ap.add_argument("--interval", type=int, default=900, help="segundos entre revisiones de focos (mínimo 300)")
+    ap.add_argument("--auto-refresh", action="store_true", help="actualiza FIRMS antes de cada revisión; requiere FIRMS_MAP_KEY")
     args = ap.parse_args(argv)
+    if args.interval < 300:
+        ap.error("--interval debe ser al menos 300 segundos")
+    if args.auto_refresh and not env("FIRMS_MAP_KEY"):
+        print("Falta FIRMS_MAP_KEY en .env; no se puede actualizar FIRMS automáticamente.", file=sys.stderr)
+        return 2
 
     cfg = load_config()
     ds = load_dataset(cfg)
@@ -411,7 +450,7 @@ def main(argv: list[str] | None = None) -> int:
         print("Demo enviada. Pulsa un botón en Telegram y luego --poll --once para verlo guardado.")
         return 0
 
-    return poll(cfg, tg, ds, zone, args.interval, args.once)
+    return poll(cfg, tg, ds, zone, args.interval, args.once, auto_refresh=args.auto_refresh)
 
 
 if __name__ == "__main__":

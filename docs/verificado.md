@@ -56,3 +56,20 @@
 - **POR VERIFICAR:** recepción real del nuevo formato del aviso y del pin en Telegram con la descarga
   NRT actualizada. Viento puntual, carreteras, agua, poblados, prioridad por exposición, recurrencia
   local y descarga de mapas sin conexión todavía no están implementados. No usarlos para decidir rutas.
+
+## Consultas en la app y avisos automáticos (pendiente de prueba real)
+
+- La caja de preguntas de la app y el bot usan el mismo respondedor de reglas, no un modelo de IA
+  ni un chat de Telegram incrustado. Las preguntas se limitan a datos recientes guardados, temporada,
+  sensores y funcionamiento de avisos; no calcula viento, rutas ni cercanía a viviendas.
+- El modo `bot.py --poll --auto-refresh` intenta descargar FIRMS cada 15 minutos para la zona elegida.
+  Si alguna fuente falla, conserva la descarga anterior y no envía alertas en ese ciclo. El bot solo
+  envía detecciones de los últimos tres días UTC si la descarga cubre la zona y tiene hasta seis
+  horas. Filtra por distancia y FRP sobre p95 por sensor, con mínimo 20 MW: **no alerta sobre todos
+  los focos**. No hay garantía de detección, tiempo de entrega o disponibilidad.
+- Las pruebas automáticas simulan FIRMS y Telegram, e incluyen falta de datos, fallos, datos viejos,
+  cobertura y duplicados. **POR VERIFICAR:** acceso real a las tres fuentes configuradas, consulta
+  en Telegram, actualización en ejecución y recepción de alerta y pin en el teléfono con la cuenta
+  de la participante. Es necesario dejar encendido el equipo y el proceso; no es un servicio 24/7.
+- La resolución temporal guardada es el día UTC, no el minuto de detección. Un foco de calor puede
+  no ser un incendio; no sustituye avisos oficiales ni confirmación en campo.

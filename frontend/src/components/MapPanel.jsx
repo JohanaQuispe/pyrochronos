@@ -14,6 +14,8 @@ export default function MapPanel({ bbox, hotspots, meta, onBBoxChange, loading, 
   const drawRef = useRef({ active: false, start: null })
   const [drawing, setDrawing] = useState(false)
   const [coords, setCoords] = useState({ w: '', s: '', e: '', n: '' })
+  const coverage = hotspots?.meta?.bbox
+  const fullCoverage = Array.isArray(coverage) && bbox && coverage[0] <= bbox[0] && coverage[1] <= bbox[1] && coverage[2] >= bbox[2] && coverage[3] >= bbox[3]
 
   useEffect(() => {
     if (mapRef.current || !mapEl.current) return undefined
@@ -196,7 +198,7 @@ export default function MapPanel({ bbox, hotspots, meta, onBBoxChange, loading, 
           : layer === 'history' ? 'Historial del periodo elegido; no indica focos activos ahora.'
             : !hotspots ? 'Consultando datos NRT guardados; no es una consulta en vivo.'
               : !hotspots.meta.available ? 'Sin datos NRT cargados. No significa que no haya focos.'
-                : `NRT guardado · última descarga: ${hotspots.meta.fetched_at || 'desconocida'} · última detección: ${hotspots.meta.last_day || 'desconocida'}. Puede estar desactualizado; no es tiempo real.`}
+                : `NRT guardado · última descarga: ${hotspots.meta.fetched_at || 'desconocida'} · última detección: ${hotspots.meta.last_day || 'desconocida'}. ${fullCoverage ? '' : 'Cobertura completa de la zona no verificada. '}Puede estar desactualizado; no es tiempo real.`}
       </p>
 
       <div className="flex items-end gap-1.5 px-4 pb-3">
