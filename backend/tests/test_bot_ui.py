@@ -107,3 +107,20 @@ def test_language_preference_persists_through_location_and_english_controls(bot,
     bot.handle_message(cfg, tg, {**base, 'text': '/idioma es'}, None, 'peru')
     assert groundtruth.load_geofences(cfg)['7']['language'] == 'es'
     assert groundtruth.load_geofences(cfg)['7']['lat'] == -12
+
+
+def test_telegram_group_keyboard_has_no_location_request(bot, monkeypatch):
+    calls = []
+    tg = bot.Telegram('fake')
+    monkeypatch.setattr(tg, 'call', lambda method, **params: calls.append((method, params)) or {})
+    original = bot.main_keyboard()
+    tg.text(-100123, 'Welcome', original)
+    payload = calls[-1][1]
+    assert 'chat privado' in payload['text']
+    assert all(not button.get('request_location') for row in payload['reply_markup']['keyboard'] for button in row)
+    assert original['keyboard'][0][0]['request_location'] is True
+    tg.text(7, 'Welcome', original)
+    assert calls[-1][1]['reply_markup']['keyboard'][0][0]['request_location'] is True
+    inline = bot.radius_keyboard()
+    tg.text(-100123, 'Radius', inline)
+    assert calls[-1][1]['reply_markup'] == inline

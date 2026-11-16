@@ -80,6 +80,19 @@ class Telegram:
         return body.get("result", {})
 
     def text(self, chat_id, text: str, keyboard: dict | None = None) -> dict:
+        # Telegram no permite botones request_location en grupos. Quitar únicamente
+        # esos botones, sin alterar teclados inline ni el teclado del chat privado.
+        try:
+            is_group = int(chat_id) < 0
+        except (TypeError, ValueError):
+            is_group = False
+        if is_group and keyboard and 'keyboard' in keyboard:
+            rows = [[button for button in row if not button.get('request_location')]
+                    for row in keyboard['keyboard']]
+            if rows != keyboard['keyboard']:
+                keyboard = {**keyboard, 'keyboard': [row for row in rows if row]}
+                text += ('\n\nPara registrar tu ubicación de forma privada, abre el chat privado con el bot. '
+                         'To share your location, open a private chat with the bot.')
         params = {"chat_id": chat_id, "text": text, "parse_mode": "Markdown",
                   "disable_web_page_preview": True}
         if keyboard:
@@ -482,8 +495,34 @@ def diagnose_live(cfg: Config, dataset: Dataset, zone: str) -> dict:
     return result
 
 
+def send_monitor_status(cfg: Config, tg: Telegram, zone: str, fetched_at: str | None, success: bool) -> None:
+    """Estado optativo, solo a geocercas registradas en el chat privado de su titular."""
+    for fence in groundtruth.active_geofences(cfg):
+        target = str(fence.get('chat_id') or '')
+        owner = str(fence.get('telegram_id') or '')
+        if not owner.isdigit() or int(owner) <= 0 or target != owner:
+            continue  # nunca mandar estados individuales ni ubicaciones a grupos
+        language = fence.get('language', 'es')
+        if language == 'en':
+            text = (f"✅ Monitoring cycle completed for {cfg.zone_name(zone)}. FIRMS download (UTC): {fetched_at}. "
+                    "This does not mean there are no fires or replace official warnings." if success else
+                    "⚠️ The monitoring cycle could not be fully completed. Check the bot and data connection. "
+                    "This does not establish whether fires are present.")
+        else:
+            text = (f"✅ Revisión de vigilancia completada para {cfg.zone_name(zone)}. Descarga FIRMS (UTC): {fetched_at}. "
+                    "Esto no significa que no haya incendios ni reemplaza avisos oficiales." if success else
+                    "⚠️ No se pudo completar la revisión de vigilancia. Revisa el bot y la conexión de datos. "
+                    "Esto no indica si hay incendios o no.")
+        try:
+            tg.text(target, text)
+        except RuntimeError:
+            print('No pude enviar un estado de vigilancia a Telegram.', file=sys.stderr)
+
+
 def poll(cfg: Config, tg: Telegram, dataset: Dataset, zone: str, interval: int, once: bool,
-         auto_refresh: bool = False) -> int:
+         auto_refresh: bool = False, heartbeat: bool = False) -> int:
+    if heartbeat and not auto_refresh:
+        raise ValueError('heartbeat requiere actualización automática de FIRMS')
     try:
         tg.call("setMyCommands", commands=[
             {"command": "start", "description": "Empezar y compartir mi ubicación"},
@@ -520,11 +559,20 @@ def poll(cfg: Config, tg: Telegram, dataset: Dataset, zone: str, interval: int, 
                 if auto_refresh:
                     info = refresh_recent(cfg, zone)
                     print(f"Datos FIRMS actualizados: {info['rows']} detecciones; fecha UTC {info['fetched_at']}")
+                if heartbeat:
+                    saved, saved_meta = nrt.load_recent(cfg)
+                    if (saved is None or saved_meta.get('fetched_at') != info.get('fetched_at')
+                            or not fresh_for_zone(saved_meta, cfg.zone_bbox(zone))):
+                        raise RuntimeError('archivo reciente ausente, sin fecha válida o sin cobertura suficiente')
                 sent = check_alerts(cfg, tg, zone, dataset)
                 if sent:
                     print(f"{sent} aviso(s) enviados")
+                if heartbeat:
+                    send_monitor_status(cfg, tg, zone, info['fetched_at'], success=True)
             except Exception as exc:
-                print(f"No pude actualizar o revisar focos; no se envían alertas en este ciclo: {nrt.redact(str(exc))}", file=sys.stderr)
+                print(f"No se completó la actualización o revisión; algunas alertas podrían haberse enviado: {nrt.redact(str(exc))}", file=sys.stderr)
+                if heartbeat:
+                    send_monitor_status(cfg, tg, zone, None, success=False)
             last_check = time.time()
         if once:
             return 0
@@ -540,7 +588,10 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--once", action="store_true", help="una sola pasada y sale")
     ap.add_argument("--interval", type=int, default=900, help="segundos entre revisiones de focos (mínimo 300)")
     ap.add_argument("--auto-refresh", action="store_true", help="actualiza FIRMS antes de cada revisión; requiere FIRMS_MAP_KEY")
+    ap.add_argument("--heartbeat", action="store_true", help="envía el estado de cada revisión a los chats privados registrados; requiere --poll y --auto-refresh")
     args = ap.parse_args(argv)
+    if args.heartbeat and (not args.poll or not args.auto_refresh or args.check_live or args.dry_run or args.send_demo):
+        ap.error("--heartbeat requiere --poll --auto-refresh y no puede combinarse con diagnóstico o demo")
     if args.interval < 300:
         ap.error("--interval debe ser al menos 300 segundos")
     if args.auto_refresh and not env("FIRMS_MAP_KEY"):
@@ -587,7 +638,7 @@ def main(argv: list[str] | None = None) -> int:
         print("Demo enviada. Pulsa un botón en Telegram y luego --poll --once para verlo guardado.")
         return 0
 
-    return poll(cfg, tg, ds, zone, args.interval, args.once, auto_refresh=args.auto_refresh)
+    return poll(cfg, tg, ds, zone, args.interval, args.once, auto_refresh=args.auto_refresh, heartbeat=args.heartbeat)
 
 
 if __name__ == "__main__":

@@ -226,3 +226,63 @@ def test_live_alert_filters_and_send_failure_retry(bot, cfg, ds):
     nrt.save_recent(cfg, rows, nrt.NRT_SOURCES, 3, bbox=[bbox[0]+1, bbox[1], bbox[2], bbox[3]])
     assert bot.check_alerts(cfg, tg, 'peru', ds) == 0
     assert not bot.diagnose_live(cfg, ds, 'peru')['fresh_and_covered']
+
+
+def test_heartbeat_success_failure_private_only(bot, cfg, ds, monkeypatch):
+    groundtruth.save_geofence(cfg, 7, -12., -69., 10, chat_id=7)
+    groundtruth.save_geofence(cfg, 8, -12., -69., 10, chat_id=-100)
+    groundtruth.save_geofence(cfg, 9, -12., -69., 10, chat_id=9)
+    groundtruth.set_language(cfg, 9, 'en')
+    class FakeTelegram:
+        def __init__(self): self.messages = []
+        def call(self, method, **kwargs): return []
+        def text(self, target, text, keyboard=None): self.messages.append((target, text))
+    tg = FakeTelegram()
+    stamp = datetime.now(timezone.utc).isoformat()
+    info = {'rows': 5, 'fetched_at': stamp, 'bbox': list(cfg.zone_bbox('peru'))}
+    monkeypatch.setattr(bot, 'refresh_recent', lambda *a: info)
+    monkeypatch.setattr(nrt, 'load_recent', lambda *a: (pd.DataFrame(), info))
+    monkeypatch.setattr(bot, 'check_alerts', lambda *a: 0)
+    assert bot.poll(cfg, tg, ds, 'peru', 900, True, auto_refresh=True, heartbeat=True) == 0
+    assert {target for target, _ in tg.messages} == {'7', '9'}
+    assert 'Revisión de vigilancia completada' in tg.messages[0][1]
+    assert 'no significa que no haya incendios' in tg.messages[0][1]
+    assert stamp in tg.messages[0][1]
+    assert 'Monitoring cycle completed' in tg.messages[1][1]
+    tg.messages.clear()
+    def fail(*a): raise RuntimeError('connection failed')
+    monkeypatch.setattr(bot, 'refresh_recent', fail)
+    assert bot.poll(cfg, tg, ds, 'peru', 900, True, auto_refresh=True, heartbeat=True) == 0
+    assert len(tg.messages) == 2 and 'No se pudo completar' in tg.messages[0][1]
+    assert not any('completada' in text.lower() for _, text in tg.messages)
+    with pytest.raises(ValueError): bot.poll(cfg, tg, ds, 'peru', 900, True, heartbeat=True)
+
+
+def test_heartbeat_never_reports_success_for_bad_coverage_or_alert_failure(bot, cfg, ds, monkeypatch):
+    groundtruth.save_geofence(cfg, 7, -12., -69., 10, chat_id=7)
+    class Telegram:
+        def __init__(self): self.messages = []
+        def call(self, *args, **kwargs): return []
+        def text(self, target, text, keyboard=None): self.messages.append(text)
+    tg = Telegram()
+    info = {'rows': 1, 'fetched_at': datetime.now(timezone.utc).isoformat(), 'bbox': [0, 0, 1, 1]}
+    monkeypatch.setattr(bot, 'refresh_recent', lambda *a: info)
+    monkeypatch.setattr(nrt, 'load_recent', lambda *a: (pd.DataFrame(), info))
+    monkeypatch.setattr(bot, 'check_alerts', lambda *a: pytest.fail('bad coverage must not be checked'))
+    bot.poll(cfg, tg, ds, 'peru', 900, True, auto_refresh=True, heartbeat=True)
+    assert len(tg.messages) == 1 and 'No se pudo completar' in tg.messages[0]
+    info['bbox'] = list(cfg.zone_bbox('peru'))
+    def fail(*a): raise RuntimeError('Telegram error')
+    monkeypatch.setattr(bot, 'check_alerts', fail)
+    tg.messages.clear()
+    bot.poll(cfg, tg, ds, 'peru', 900, True, auto_refresh=True, heartbeat=True)
+    assert len(tg.messages) == 1 and 'No se pudo completar' in tg.messages[0]
+
+
+def test_heartbeat_off_by_default(bot, cfg, ds, monkeypatch):
+    groundtruth.save_geofence(cfg, 7, -12., -69., 10, chat_id=7)
+    class Telegram:
+        def call(self, *args, **kwargs): return []
+        def text(self, *args, **kwargs): pytest.fail('default must not send heartbeat')
+    monkeypatch.setattr(bot, 'check_alerts', lambda *a: 0)
+    assert bot.poll(cfg, Telegram(), ds, 'peru', 900, True) == 0
