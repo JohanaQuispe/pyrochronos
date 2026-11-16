@@ -12,3 +12,13 @@ El bot solo avisa detecciones que cumplen el umbral de intensidad y están en el
 ## Idioma del bot
 
 En Telegram escribe `/language en` para mensajes en inglés o `/idioma es` para volver a español. Se guarda por usuario y se mantiene al compartir una ubicación nueva. En grupos, quienes reciban un aviso compartido pueden tener distintos idiomas; el mensaje usa el idioma de la geocerca que genere ese envío.
+
+## Confirmación periódica opcional
+
+Para recibir en los chats privados registrados una confirmación de cada ciclo, ejecuta **en lugar del comando de inicio anterior** (nunca dos procesos del mismo bot):
+
+```powershell
+python backend\scripts\bot.py --poll --auto-refresh --zone peru --heartbeat
+```
+
+Cada ciclo (normalmente aproximadamente cada 15 minutos) informa si terminó la descarga y revisión, con la fecha UTC de descarga. El aviso no significa que no haya incendios ni es una alerta oficial. Si la revisión falla, el bot intenta avisar del fallo; si el proceso, internet o Telegram fallan, incluso ese aviso puede no llegar. Ante la ausencia de una confirmación, comprueba el proceso y la conexión. El estado solo se envía a ubicaciones registradas en el chat privado de su titular, no a grupos; compartir de nuevo la ubicación en privado cambia el chat al que se dirigen los avisos para esa persona. Puede desactivarse retirando `--heartbeat` y reiniciando el proceso.
