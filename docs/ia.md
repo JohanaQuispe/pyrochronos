@@ -1,35 +1,13 @@
-# Declaración de uso de inteligencia artificial
+# Uso de inteligencia artificial
 
-El reto exige declarar el uso de IA. Esto es lo que se usó y para qué.
+Durante el desarrollo se utilizó asistencia de IA en Arena.ai para apoyar tareas de programación, pruebas y redacción. El equipo es responsable de revisar los resultados y sus limitaciones. Las pruebas automatizadas y las comprobaciones realizadas se describen en [verificado.md](verificado.md).
 
-## Resumen
+## En la aplicación
 
-| Uso | Herramienta | Dónde | Cómo se revisó |
-|---|---|---|---|
-| Asistencia de programación (estructura del código, borradores de funciones, redacción de textos y documentación) | Asistente de IA en el editor (Arena.ai / Agent Mode) | Todo el repositorio | Cada función se ejecutó con datos reales, se cubrió con pruebas automáticas y se revisó a mano antes de usarla |
-| Verificación de parámetros del servicio FIRMS (máximo de días por consulta, columnas, fechas de inicio) | Búsqueda web + páginas oficiales de NASA | `docs/verificado.md` | Contraste contra la página oficial del API y contra las cabeceras reales de los archivos |
+La aplicación no usa un modelo de lenguaje para responder preguntas. El asistente de la web y del bot utiliza reglas y plantillas; los cálculos se realizan con código a partir de los datos cargados. Las respuestas deben verificarse y no sustituyen el criterio operativo.
 
-## Lo que la IA **no** hace en el producto
+## Datos y servicios externos
 
-- **No calcula ningún número.** Todo lo que se muestra lo calculan `backend/pyro/*` con pandas/NumPy
-  a partir de los CSV de NASA.
-- **No hay modelo de lenguaje en la aplicación.** El bloque "En una frase" son plantillas que
-  rellenan cifras calculadas por el sistema (`backend/pyro/summary.py`) y el boletín de Telegram usa
-  las mismas plantillas (`backend/pyro/notify.py`). Por eso no puede inventar cifras.
-- **No se envía ningún dato del usuario a ningún servicio externo.**
+El bot consulta NASA FIRMS y se comunica con Telegram para recibir mensajes y enviar avisos. Las ubicaciones que se comparten con el bot y los datos de un aviso pueden transmitirse a través de Telegram. El mapa base solicita imágenes a OpenStreetMap. Los datos locales de ubicaciones y verificaciones requieren protección si la aplicación se publica.
 
-## Por qué se decidió así
-
-Se evaluó un asistente de preguntas con un modelo generativo (Groq/Gemini, claves en el servidor).
-Se **descartó para esta entrega** por dos razones honestas: (1) el tiempo alcanzaba mejor para
-asegurar el calendario, el mapa, las anomalías y el CSV; (2) un asistente que redacta cifras es un
-riesgo si no se puede verificar cada respuesta. La arquitectura deja el hueco preparado: el payload
-de `/api/calendar` ya contiene todo lo que un redactor necesitaría, y `summary.py` es el único punto
-donde se genera texto.
-
-## Reglas que se respetaron
-
-- Ninguna clave de API en el código ni en el navegador: solo en variables de entorno
-  (`FIRMS_MAP_KEY`, `TELEGRAM_BOT_TOKEN`) y `.env` está en `.gitignore`.
-- Nada simulado: lo que la interfaz muestra está construido y se puede ejecutar.
-- Licencia de código abierto (MIT) y datos de dominio público.
+Las claves se configuran en el servidor o en `.env`, que no debe publicarse. No incluyas coordenadas personales, tokens ni claves en capturas o demostraciones.

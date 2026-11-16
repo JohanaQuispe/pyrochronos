@@ -1,287 +1,44 @@
-# Bot de PyroChronos: configuración paso a paso
+# Bot de Telegram: guía rápida
 
-Todo lo que hay que configurar, en orden, con lo que debes ver en cada paso.
-Si algo falla, al final está la sección **Problemas y arreglos**.
+El bot puede enviar avisos sobre detecciones de calor cercanas a una ubicación compartida. No confirma incendios ni reemplaza una alerta oficial.
 
----
+## 1. Preparar las claves
 
-## 0. Revisión automática (30 segundos)
+- Obtén una [clave de NASA FIRMS](https://firms.modaps.eosdis.nasa.gov/api/map_key/).
+- Crea un bot en [BotFather](https://t.me/BotFather) y guarda su token.
+- En la carpeta del proyecto, copia `.env.example` como `.env` **si todavía no tienes `.env`**. Escribe allí `FIRMS_MAP_KEY` y `TELEGRAM_BOT_TOKEN`.
 
-Si algo no funciona y no sabes qué falta, ejecuta **un solo comando**:
-
-```bash
-python backend/scripts/doctor.py
-```
-
-Revisa dependencias, datos, `.env`, el bot, los focos recientes, POWER y la API, y termina con
-`SIGUIENTE PASO → …`. Nunca imprime una clave completa.
-
-## 0.b Windows (PowerShell)
-
-Los comandos de esta guía funcionan igual, con tres cambios:
+En PowerShell, para crear el archivo sin sobrescribir uno existente:
 
 ```powershell
-cd "C:\ruta\a\pyrochronos"
-python -m pip install -r requirements.txt     # en vez de python3 -m venv ...
-python backend\scripts\doctor.py
+if (-not (Test-Path .env)) { Copy-Item .env.example .env }
+notepad .env
 ```
 
-- **El `.env` se carga solo** al arrancar cualquier script (no existe `set -a` en PowerShell).
-- El aviso de permisos `0o666` del `.env` es normal en Windows: allí no se gestiona con `chmod`.
-- Si el proyecto está dentro de **OneDrive**, la sincronización puede bloquear el `.parquet`
-  (archivos "solo en línea"). Si da error de lectura, copia el proyecto a `C:\pyrochronos`.
+No compartas el archivo, las claves ni capturas donde aparezcan. El bot carga `.env` al iniciarse. `TELEGRAM_CHAT_ID` solo es necesario para la demo de envío `--send-demo`, no para los avisos por ubicación.
 
-## 0.c Antes de empezar (5 min)
+## 2. Iniciar el bot
 
-| Qué | Comando | Qué debes ver |
-|---|---|---|
-| Python 3.11+ y dependencias | `python3 -m venv .venv && .venv/bin/pip install -r requirements.txt` | termina sin errores |
-| Clave de NASA FIRMS (gratis) | https://firms.modaps.eosdis.nasa.gov/api/map_key/ | un correo con tu `MAP_KEY` |
-| Bot creado en @BotFather | ver paso 1 | un token `1234567890:AA…` |
-| Datos históricos en su sitio | `ls data/derived/detections.parquet` | el archivo existe (13 MB) |
-
----
-
-## 1. Crear el bot en @BotFather (5 min, a mano)
-
-Telegram **no permite** crear bots por API: este paso es tuyo, desde el teléfono.
-
-1. Abre Telegram → busca **@BotFather** (el oficial, insignia azul).
-2. `/newbot`
-3. Nombre visible: `PyroChronos`
-4. Usuario: `pyrochronos_tu_nombre_bot` (debe terminar en `bot`)
-5. Guarda el token que te da. **No lo pegues en ningún chat.**
-
----
-
-## 2. Ponerle cara y voz al bot (2 min, opcional pero recomendado)
-
-En el mismo chat con @BotFather, uno por uno:
-
-**a) Nombre**
-```
-/setname
-```
-→ elige el bot → `PyroChronos`
-
-**b) Foto de perfil** (usa `frontend/public/bot-avatar.png`, ya recortada para el círculo de Telegram)
-```
-/setuserpic
-```
-→ elige el bot → adjunta `bot-avatar.png`
-
-**c) Descripción** (lo que se lee antes de pulsar /start; máximo 512 caracteres)
-```
-/setdescription
-```
-→ elige el bot → pega:
-
-> Calendario de fuego de NASA (MODIS + VIIRS) armonizado desde el año 2000. Te aviso cuando un
-> foco de calor intenso cae dentro de tu radio y te llevo al punto exacto en el mapa. Datos
-> históricos y casi en tiempo real (≈3 h de latencia): no es un servicio oficial de emergencias
-> ni predice incendios. Pulsa /start para activar tu geocerca.
-
-**d) Texto del perfil** (máximo 120 caracteres)
-```
-/setabouttext
-```
-→
-
-> Focos de calor NASA armonizados. Avisos por geocerca. No es un aviso oficial.
-
-**e) Menú de comandos**
-```
-/setcommands
-```
-→ elige el bot → pega las cuatro líneas:
-
-```
-start - Activar aviso y compartir ubicación
-estado - Mi geocerca y focos vigilados
-radio - Cambiar el radio (ej. /radio 15)
-ayuda - Qué puedo hacer
-```
-
-**f) Grupos** (si lo vas a usar con una brigada)
-
-```
-/setjoingroups
-```
-→ `Enable`
-
-```
-/setprivacy
-```
-→ **`Disable`**  ← imprescindible: con el modo privacidad activado (el de fábrica) el bot **no
-recibe** las ubicaciones que comparten los miembros del grupo, solo los comandos. Después de
-cambiarlo, **quita el bot del grupo y vuelve a añadirlo**, o el cambio no se aplica.
-
----
-
-## 3. Configurar las claves en `.env` (2 min)
-
-En la raíz del proyecto:
+Con las dependencias instaladas según el [README](../README.md), abre una terminal en la carpeta del proyecto:
 
 ```bash
-cp .env.example .env
-chmod 600 .env
+python backend/scripts/bot.py --poll --auto-refresh --zone peru
 ```
 
-Edita `.env` y deja exactamente esto (se carga **automáticamente** al arrancar los scripts;
-no hace falta `source` ni `set -a`):
+En Windows puedes usar `python backend\scripts\bot.py --poll --auto-refresh --zone peru`. Deja la terminal abierta y no ejecutes dos procesos del mismo bot. Para incluir una confirmación periódica de vigilancia, añade `--heartbeat` al comando.
 
-```ini
-FIRMS_MAP_KEY=tu_clave_de_firms
-TELEGRAM_BOT_TOKEN=1234567890:AAH...
-TELEGRAM_CHAT_ID=
-PYRO_SETUP_KEY=
-```
+En Telegram abre el bot **en privado**, envía `/start`, comparte tu ubicación y elige el radio de aviso. Puedes consultar `/estado`, usar `/language en` para inglés o `/idioma es` para español. Cambiar la zona en la web no modifica la zona vigilada por el bot.
 
-- `TELEGRAM_CHAT_ID` lo descubre el script en el paso 4.
-- `PYRO_SETUP_KEY` es opcional: si la pones, `POST /api/register-geofence` exige la cabecera
-  `X-Setup-Key`. Útil si publicas la demo.
-- `.env` está en `.gitignore`: **nunca** se sube. Nunca pegues el token en capturas.
+## 3. Comprobar el funcionamiento
 
-Comprobar que el token vale:
+El bot intenta descargar FIRMS y revisar detecciones aproximadamente cada 15 minutos. En otra terminal puedes ejecutar:
 
 ```bash
-set -a && . ./.env && set +a
-python backend/scripts/telegram_setup.py --check
-```
-Debes ver: `Bot: @tu_bot  (nombre: PyroChronos)`.
-
----
-
-## 4. Descubrir tu `chat_id` y guardarlo (2 min)
-
-1. Abre el chat de **tu bot** y pulsa `/start` (o escribe "hola").
-2. Ejecuta:
-
-```bash
-python backend/scripts/telegram_setup.py --chat-id
-```
-Verás algo como `chat_id=123456789  tipo=private  Tu Nombre`.
-
-3. Guárdalo:
-
-```bash
-python backend/scripts/telegram_setup.py --write-env
-python backend/scripts/telegram_setup.py --test
-```
-Debe llegarte un mensaje al teléfono. **Si llega, el canal está probado.**
-
-> Para un grupo: añade el bot al grupo, escribe `@tu_bot hola` y el `--chat-id` mostrará un id
-> negativo (`-100…`). Ese es el que se guarda.
-
----
-
-## 5. Encender la capa de campo (3 min)
-
-```bash
-set -a && . ./.env && set +a
-
-# 1) datos recientes reales (necesita FIRMS_MAP_KEY; 1-5 días por consulta)
-python backend/scripts/download_recent.py --zone madrededios --days 3
-
-# 2) ver el aviso sin enviar nada
-python backend/scripts/bot.py --dry-run --zone madrededios
-
-# 3) mandar ese aviso a tu Telegram (marcado DEMO con un foco histórico)
-python backend/scripts/bot.py --send-demo --zone madrededios
-
-# 4) escuchar: /start, comparte ubicación, pulsa un botón del aviso
-python backend/scripts/bot.py --poll --zone madrededios
+python backend/scripts/bot.py --check-live --zone peru
 ```
 
-**Deja la última terminal abierta**: ahí vive el bot. Si la cierras, deja de escuchar.
+El diagnóstico no envía mensajes ni cambia el historial. Muestra si la descarga está fresca y cubre la zona, y si hay coincidencias pendientes. La llegada de un mensaje de estado o una coincidencia en el diagnóstico **no demuestra la entrega de una alerta real**. Consulta la [guía de comprobación](comprobacion-alerta-real.md).
 
-### Qué debes ver, en orden
+Si el proceso se detiene, la computadora se suspende o falla la conexión, el bot deja de vigilar. Una confirmación de estado no implica que no haya incendios. El bot filtra por distancia e intensidad; no avisa de todas las detecciones.
 
-| Acción | Respuesta esperada |
-|---|---|
-| `/start` | bienvenida + los botones **📍 Compartir mi ubicación**, **⚙️ Distancia de aviso**, **ℹ️ Mi estado** |
-| pulsar *Compartir* | `✅ Listo. Te aviso si se detecta un fuego a menos de 10 km de aquí.` |
-| pulsar *Distancia de aviso* | botones de 5 / 10 / 20 / 50 km → `Listo: te aviso hasta 15 km a la redonda.` |
-| pulsar *Mi estado* | `📍 Estás en: …`, `📏 … km a la redonda`, focos vigilados, confirmaciones |
-| pulsar 🔥 / 🌾 / ❌ | `Registrado: …` y `✅ Guardado` en el chat |
-| ver el resultado | `curl -s localhost:8000/api/groundtruth` |
-
----
-
-## 6. La web y la API (2 min)
-
-```bash
-python -m uvicorn api.main:app --app-dir backend --host 0.0.0.0 --port 8000
-```
-
-Abre `http://localhost:8000`. La tarjeta **Contexto climático** dice "sin datos" hasta que hagas:
-
-```bash
-python backend/scripts/download_power.py --zone madrededios --years 5
-```
-
----
-
-## 7. Lista de verificación final
-
-```
-[ ] .env con FIRMS_MAP_KEY, TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID  (chmod 600)
-[ ] telegram_setup.py --check  → Bot: @tu_bot
-[ ] telegram_setup.py --test   → llega el mensaje al teléfono
-[ ] download_recent.py         → data/derived/recent.parquet
-[ ] bot.py --send-demo         → pin + 3 botones en el teléfono
-[ ] bot.py --poll              → /start, ubicación, veredicto guardado
-[ ] uvicorn ... --port 8000    → la web abre con el calendario
-[ ] download_power.py          → la tarjeta climática deja de decir "sin datos"
-[ ] git status                 → .env NO aparece
-```
-
----
-
-## 8. Problemas y arreglos
-
-| Síntoma | Causa | Arreglo |
-|---|---|---|
-| `Unauthorized` / 401 | token mal copiado o revocado | @BotFather → `/mybots` → API Token → revocar y pegar el nuevo |
-| `chat not found` | nunca pulsaste /start | abre el chat del bot, pulsa /start, reintenta |
-| `No hay datos recientes cargados` | falta `recent.parquet` | `download_recent.py --zone … --days 3` (necesita MAP_KEY) |
-| El bot no responde a nada | `--poll` no está corriendo o cerraste la terminal | vuelve a lanzarlo; debe quedarse abierto |
-| No llegan avisos | radio pequeño o ningún foco sobre el p95 | `/radio 50`; mira `bot.py --dry-run` para ver el umbral |
-| `Falta TELEGRAM_BOT_TOKEN` | `.env` no exportado en esa terminal | `set -a && . ./.env && set +a` |
-| El pin abre en el navegador | configuración de Telegram | en Ajustes → Datos y almacenamiento → elegir app de mapas |
-| `403` al registrar geocerca | `PYRO_SETUP_KEY` definida | manda la cabecera `X-Setup-Key` o quita la variable |
-
----
-
-## 9. Cómo contarlo en el video (30 s)
-
-> "Una persona de la brigada comparte su ubicación con el bot. Si un foco reciente cargado supera
-> el umbral de FRP de su sensor en la zona y está dentro del radio elegido, recibe distancia, rumbo,
-> coordenadas, un pin y tres botones para reportar qué era. Es una detección satelital que debe
-> confirmarse en campo, no una orden de despacho."
-
-El envío y el pin deben verificarse con datos recientes y Telegram; la app no consulta FIRMS en vivo.
-
-## Consultas y vigilancia periódica (Windows)
-
-En la app, en **Monitoreo**, usa «Pregúntale a PyroChronos». Ese cuadro responde desde el servidor
-local con reglas compartidas con el bot, **no** es una conversación incrustada de Telegram ni una IA
-que responda cualquier cosa. Prueba «¿Hay focos recientes?» o «¿Cómo recibo avisos?». La zona de la
-app es la seleccionada arriba; la zona de Telegram es la elegida al iniciar el bot.
-
-Para activar la actualización periódica del bot, en otra ventana de PowerShell, desde la carpeta del
-proyecto y con las claves ya configuradas en `.env`:
-
-```powershell
-python backend\scripts\bot.py --poll --auto-refresh --zone peru
-```
-
-En Telegram abre el bot, pulsa `/start`, comparte tu ubicación y elige la distancia. El proceso
-consulta FIRMS cada 15 minutos mientras la ventana y la conexión sigan funcionando. **No muestra ni
-necesita que pegues las claves en el chat.** Si falla una fuente, no considera esa descarga completa
-ni manda alertas en ese ciclo. Solo avisa focos que cumplen el umbral de FRP y caen dentro del radio;
-no avisa todos los incendios. Las detecciones pueden llegar con retraso y requieren confirmación.
-
-Antes de usarlo, probar en el teléfono el envío de un ejemplo (`--send-demo`) y después la vigilancia
-con datos recientes reales. No presentar la recepción de avisos automáticos como verificada hasta
-comprobarla. El servidor de la app y el bot deben seguir abiertos; no garantizan vigilancia 24/7.
+Las ubicaciones y el historial se guardan localmente. **No publiques la web con datos personales sin proteger el acceso a la API.** En un grupo, todos pueden ver lo que se comparte; por privacidad se recomienda el chat privado.
