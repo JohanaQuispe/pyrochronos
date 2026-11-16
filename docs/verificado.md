@@ -1,5 +1,8 @@
 # VERIFICADO / POR VERIFICAR
 
+> **Actualización del método:** se corrigió el uso del factor: los periodos con solo VIIRS ahora usan una calibración independiente unión/VIIRS; si no hay evidencia suficiente no se estima ese periodo. Las cifras y tablas anteriores se conservan como salida histórica, **no corresponden al método corregido**. Falta recalcular con el parquet local y validar VIIRS con `python backend/scripts/validacion_retrospectiva.py --sensor viirs`; las cifras y rankings siguen siendo provisionales. La presencia de detecciones no garantiza cobertura completa.
+
+
 ## Verificado (comprobado contra la fuente o con los datos en mano)
 
 | Dato | Cómo se comprobó |
@@ -45,17 +48,16 @@
   **4,94 %**, MAPE **7,01 %**, WAPE **7,04 %**, máximo **19,70 %** en 2025. El resultado fue
   compartido en el chat; el parquet local no está disponible en este entorno para reproducirlo aquí.
   La tabla completa y la huella del archivo están en `docs/validacion-retrospectiva.md`.
-- La prueba no comprueba incendios de campo, no mide error real anterior a 2012 y no resuelve la
-  estimación de VIIRS sin MODIS. Los doce meses con detecciones no prueban cobertura completa.
+- La prueba MODIS no comprueba incendios de campo, no mide error real anterior a 2012 y no valida
+  la estimación desde VIIRS. Ver `docs/validacion-viirs.md`. Doce meses con detecciones no prueban cobertura completa.
 
 ## Cifras locales y armonización
 
 - **Resultado comunicado por la participante:** `numeros_pitch.py` sobre su parquet local informa
   2 212 061 detecciones, desde 2000-11-11 hasta 2026-11-01. No es el parquet del repositorio.
-- **POR VERIFICAR antes de presentar totales armonizados o ranking:** en `harmonize`, un periodo con
-  VIIRS pero sin MODIS se multiplica por el factor unión/MODIS. Ese factor no está calibrado para
-  convertir VIIRS a la unión y puede inflar los resultados. Revisar el método y recalcular con el
-  archivo local. Las cifras provisionales están en `docs/pitch.md`.
+- **POR VERIFICAR antes de presentar totales o ranking:** ahora VIIRS usa un factor independiente;
+  falta ejecutar su validación y recalcular con el archivo local. Las cifras antiguas de `docs/pitch.md`
+  son provisionales y no reflejan este cambio.
 
 ## Mapa táctico y alertas: límites operativos
 

@@ -74,6 +74,7 @@ def save_geofence(
         "lat": float(lat),
         "lon": float(lon),
         "radius_km": float(radius_km),
+        "language": previous.get("language", "es"),
         "name": name or previous.get("name"),
         "role": role or previous.get("role"),
         "updated_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
@@ -81,6 +82,20 @@ def save_geofence(
     data[key] = record
     _write(_path(cfg, GEOFENCES_FILE), data)
     return record
+
+
+def set_language(cfg: Config, telegram_id: int | str, language: str) -> dict:
+    """Guardar idioma aun cuando el usuario no haya compartido ubicación."""
+    if language not in ('es', 'en'):
+        raise ValueError('idioma no soportado')
+    data = load_geofences(cfg)
+    key = str(telegram_id)
+    rec = data.get(key) or {'telegram_id': key, 'lat': None, 'lon': None, 'radius_km': 10.0}
+    rec['language'] = language
+    rec['updated_at'] = datetime.now(timezone.utc).isoformat(timespec='seconds')
+    data[key] = rec
+    _write(_path(cfg, GEOFENCES_FILE), data)
+    return rec
 
 
 def set_radius(cfg: Config, telegram_id: int | str, radius_km: float) -> dict | None:

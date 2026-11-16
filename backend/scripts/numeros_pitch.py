@@ -36,12 +36,14 @@ def bloque(daily: pd.DataFrame, cfg, granularity: str, measure: str) -> dict:
     top = por_anio.sort_values(ascending=False).head(5)
     return {
         "factor_global": round(float(cal.global_factor), 3),
+        "factor_union_viirs": None if cal.viirs_global_factor is None else round(cal.viirs_global_factor, 3),
+        "periodos_sin_estimacion": int(ser['value'].isna().sum()),
         "banda": [round(float(cal.global_p25), 3), round(float(cal.global_p75), 3)],
         "concordancia_r": None if cal.agreement_r is None else round(float(cal.agreement_r), 3),
         "pares_solape": int(cal.agreement_n),
         "factor_por_periodo": {str(k): round(float(v), 2) for k, v in sorted(cal.factor_by_period.items())},
-        "total_armonizado": float(round(por_anio.sum(), 0)),
-        "anios_mas_activos": {int(k): float(round(v, 0)) for k, v in top.items()},
+        "total_armonizado": None if ser['value'].isna().any() else float(round(por_anio.sum(), 0)),
+        "anios_mas_activos": None if ser['value'].isna().any() else {int(k): float(round(v, 0)) for k, v in top.items()},
         "desde": int(ser["period_year"].min()),
         "hasta": int(ser["period_year"].max()),
     }

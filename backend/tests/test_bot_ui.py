@@ -83,3 +83,27 @@ def test_group_keeps_person_and_chat_separate(cfg):
     fences = groundtruth.active_geofences(cfg)
     assert {f["telegram_id"] for f in fences} == {"7", "8"}
     assert {f["chat_id"] for f in fences} == {"-100123"}
+
+
+def test_language_preference_persists_through_location_and_english_controls(bot, cfg):
+    class FakeTelegram:
+        def __init__(self): self.messages = []; self.callbacks = []
+        def text(self, chat_id, text, keyboard=None): self.messages.append((text, keyboard))
+        def call(self, method, **kwargs): self.callbacks.append((method, kwargs))
+    tg = FakeTelegram()
+    base = {'chat': {'id': 7, 'type': 'private'}, 'from': {'id': 7, 'first_name': 'Test'}}
+    bot.handle_message(cfg, tg, {**base, 'text': '/language en'}, None, 'peru')
+    assert groundtruth.load_geofences(cfg)['7']['language'] == 'en'
+    assert 'English' in tg.messages[-1][0]
+    bot.handle_message(cfg, tg, {**base, 'location': {'latitude': -12, 'longitude': -69}}, None, 'peru')
+    assert groundtruth.load_geofences(cfg)['7']['language'] == 'en'
+    assert 'heat detections' in tg.messages[-1][0]
+    bot.handle_message(cfg, tg, {**base, 'text': '/distance 20'}, None, 'peru')
+    assert groundtruth.load_geofences(cfg)['7']['radius_km'] == 20
+    assert 'Saved' in tg.messages[-1][0]
+    bot.handle_callback(cfg, tg, {'id': 'cb', 'from': {'id': 7}, 'data': 'r:5', 'message': {'chat': {'id': 7}}})
+    assert groundtruth.load_geofences(cfg)['7']['radius_km'] == 5
+    assert 'Saved' in tg.messages[-1][0]
+    bot.handle_message(cfg, tg, {**base, 'text': '/idioma es'}, None, 'peru')
+    assert groundtruth.load_geofences(cfg)['7']['language'] == 'es'
+    assert groundtruth.load_geofences(cfg)['7']['lat'] == -12

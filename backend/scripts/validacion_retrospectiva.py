@@ -26,13 +26,15 @@ from pyro.config import load_config  # noqa: E402
 from pyro.harmonize import calibrate  # noqa: E402
 
 
-def validate(agg: pd.DataFrame, cfg, coverage_start: date, coverage_end: date) -> dict:
+def validate(agg: pd.DataFrame, cfg, coverage_start: date, coverage_end: date, sensor: str = 'modis') -> dict:
     """Leave-one-year-out: evalúa años completos con MODIS y VIIRS en los 12 meses.
 
     El conjunto de entrenamiento usa la configuración y los filtros de calibrate(),
     sin ningún periodo del año evaluado. Se excluyen años sin los doce meses con
     detecciones de ambos sensores: no se infiere cobertura a partir de ceros.
     """
+    if sensor not in ('modis', 'viirs'):
+        raise ValueError('sensor debe ser modis o viirs')
     first, last = cfg.overlap_start.year, cfg.overlap_end.year
     records, skipped = [], []
     months = set(range(1, 13))
@@ -51,17 +53,22 @@ def validate(agg: pd.DataFrame, cfg, coverage_start: date, coverage_end: date) -
             skipped.append((year, 'hay meses sin detecciones válidas de ambos sensores'))
             continue
         train = agg[(agg['period_year'] != year) & agg['period_year'].between(first, last)]
-        usable = ((train['modis_cd'] >= float(cfg.harmonization['min_periods_for_factor']))
+        sensor_col = f'{sensor}_cd'
+        usable = ((train[sensor_col] >= float(cfg.harmonization['min_periods_for_factor']))
                   & (train['modis_cd'] > 0) & (train['viirs_cd'] > 0)
-                  & np.isfinite(train['union_cd'] / train['modis_cd'].replace(0, np.nan)))
+                  & np.isfinite(train['union_cd'] / train[sensor_col].replace(0, np.nan)))
         if int(usable.sum()) < 3:
             skipped.append((year, 'menos de 3 periodos útiles para calibrar sin ese año'))
             continue
         cal = calibrate(train, 'cell_days', first, last,
                         int(cfg.harmonization['shrink_min_years']),
                         float(cfg.harmonization['min_periods_for_factor']))
-        factors = [cal.factor(int(month)) for month in held['period_index']]
-        predicted = float(sum(float(m) * factor[0] for m, factor in zip(held['modis_cd'], factors)))
+        factor_fn = cal.factor if sensor == 'modis' else cal.factor_viirs
+        factors = [factor_fn(int(month)) for month in held['period_index']]
+        if any(factor[0] is None for factor in factors):
+            skipped.append((year, 'sin factor válido para el sensor evaluado'))
+            continue
+        predicted = float(sum(float(m) * factor[0] for m, factor in zip(held[sensor_col], factors)))
         observed = float(held['union_cd'].sum())
         if observed <= 0:
             skipped.append((year, 'unión anual sin valor positivo'))
@@ -95,6 +102,7 @@ def file_sha256(path: Path) -> str:
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description='Validación retrospectiva por año, con la zona y el parquet locales.')
     parser.add_argument('--zone', default=None, help='zona de config.yaml (por defecto Perú)')
+    parser.add_argument('--sensor', choices=('modis', 'viirs'), default='modis', help='sensor que se estima hacia la unión')
     args = parser.parse_args(argv)
     cfg = load_config()
     zone = args.zone or cfg.default_zone
@@ -108,8 +116,8 @@ def main(argv: list[str] | None = None) -> int:
     print('Calculando…')
     daily = grid.daily_counts(ds.cells, ds.df, cfg.zone_bbox(zone), cfg.cell_deg)
     agg = grid.aggregate_periods(daily, 'month')
-    result = validate(agg, cfg, ds.start, ds.end)
-    print('\nAño | unión observada | estimación desde MODIS | error firmado | error absoluto | meses con factor global')
+    result = validate(agg, cfg, ds.start, ds.end, sensor=args.sensor)
+    print(f'\nAño | unión observada | estimación desde {args.sensor.upper()} | error firmado | error absoluto | meses con factor global')
     for row in result['years']:
         print(f"{row['year']} | {row['observed']:,.0f} | {row['estimated']:,.0f} | "
               f"{row['signed_error_pct']:+.2f}% | {row['absolute_error_pct']:.2f}% | {row['fallback_months']}")
@@ -123,8 +131,8 @@ def main(argv: list[str] | None = None) -> int:
     print(f"Promedio del error absoluto porcentual anual (MAPE): {result['mean_ape']:.2f}%")
     print(f"Error absoluto ponderado por volumen (WAPE): {result['wape']:.2f}%")
     print(f"Mediana del error porcentual firmado: {result['median_bias_pct']:+.2f}%")
-    print('\nSolo evalúa la estimación MODIS→unión en el solape y años elegibles;')
-    print('la unión satelital no es verdad de campo, y no valida 2000–2011 ni la estimación desde VIIRS sola.')
+    print(f'\nSolo evalúa la estimación {args.sensor.upper()}→unión en el solape y años elegibles;')
+    print('la unión satelital no es verdad de campo; esto no valida periodos fuera del solape.')
     print('Los meses con detecciones de ambos sensores no garantizan cobertura completa.')
     print('Copia este resultado completo al chat.')
     return 0

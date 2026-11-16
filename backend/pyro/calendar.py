@@ -86,7 +86,7 @@ def build_calendar(
         int(cfg.harmonization["shrink_min_years"]),
         float(cfg.harmonization["min_periods_for_factor"]),
     )
-    ser_all = harmonize(agg_all, cal)
+    ser_all = harmonize(agg_all, cal, sources=sources)
     ser_all = anom.classify(ser_all, granularity, cfg.anomalies)
 
     # serie mensual armonizada (para tarjetas, siempre en meses)
@@ -94,7 +94,7 @@ def build_calendar(
                       int(cfg.harmonization["shrink_min_years"]),
                       float(cfg.harmonization["min_periods_for_factor"])) if granularity != "month" else cal
     if granularity != "month":
-        ser_month = anom.classify(harmonize(months_agg, cal_m), "month", cfg.anomalies)
+        ser_month = anom.classify(harmonize(months_agg, cal_m, sources=sources), "month", cfg.anomalies)
     else:
         ser_month = ser_all
 
@@ -130,10 +130,13 @@ def build_calendar(
         granularity,
     )
     covered_keys = set(zip(covered["period_year"].tolist(), covered["period_index"].tolist()))
+    # Un periodo con datos pero sin factor VIIRS no es un cero observado.
+    unavailable_keys = {(int(r.period_year), int(r.period_index)) for r in ser.itertuples()
+                        if not np.isfinite(r.value) and (r.modis > 0 or r.viirs > 0)}
     for i, y in enumerate(years):
         for j, p in enumerate(periods):
-            if (y, p) in covered_keys and np.isnan(values[i, j]):
-                values[i, j] = 0.0          # cubierto y sin focos = cero real
+            if (y, p) in covered_keys and (y, p) not in unavailable_keys and np.isnan(values[i, j]):
+                values[i, j] = 0.0          # sin detecciones en el archivo; no prueba cobertura completa
             if (y, p) not in covered_keys:
                 values[i, j] = np.nan       # fuera de cobertura = sin dato
 
@@ -149,7 +152,8 @@ def build_calendar(
                 "years_counted": int(months.loc[months["period_index"] == pid, "period_year"].nunique()),
             }
         by_year = months.groupby("period_year")["value"].sum(min_count=1).dropna()
-        if not by_year.empty:
+        # No comparar sumas parciales como si fueran años completos si faltan estimaciones.
+        if not by_year.empty and not months['value'].isna().any():
             yy = int(by_year.idxmax())
             card_year = {"period_year": yy, "value": float(by_year.max())}
             # honestidad: si el segundo ano cae dentro de la banda de incertidumbre del primero,

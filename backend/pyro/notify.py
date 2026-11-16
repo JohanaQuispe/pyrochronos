@@ -19,7 +19,7 @@ from .summary import month_name, n
 MAX_LEN = 3800
 
 
-def build_bulletin(cfg: Config, ds: Dataset, zone_key: str | None = None, years_back: int = 3) -> str:
+def build_bulletin(cfg: Config, ds: Dataset, zone_key: str | None = None, years_back: int = 3, language: str = 'es') -> str:
     """Arma el texto del boletin con cifras calculadas, sin inventar nada."""
     zone_key = zone_key or cfg.default_zone
     bbox = cfg.zone_bbox(zone_key)
@@ -30,9 +30,11 @@ def build_bulletin(cfg: Config, ds: Dataset, zone_key: str | None = None, years_
     )
     cards = payload["cards"]
     cal = payload["calendar"]
+    if language == 'en':
+        return _english_bulletin(payload, years_back)
     lines = [f"*PyroChronos · {payload['meta']['zone']}*"]
     lines.append(f"Datos NASA FIRMS hasta {payload['meta']['coverage']['end']} (histórico, no tiempo real).")
-    lines.append("Cifras armonizadas provisionales: el cálculo para periodos con VIIRS sin MODIS está en revisión. No usar el ranking anual como definitivo.")
+    lines.append("Cifras armonizadas provisionales: falta validar la estimación desde VIIRS y recalcular con los datos locales. No usar el ranking anual como definitivo.")
 
     if cards.get("season"):
         season = cards["season"]
@@ -103,3 +105,38 @@ def send_telegram(
     if r.status_code != 200:
         raise RuntimeError(f"Telegram respondio {r.status_code}: {r.text[:200]}")
     return r.json()
+
+
+def _english_bulletin(payload: dict, years_back: int) -> str:
+    months = ('January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December')
+    cards, cal, meta = payload['cards'], payload['calendar'], payload['meta']
+    lines = [f"*PyroChronos · {meta['zone']}*",
+             f"NASA FIRMS data through {meta['coverage']['end']} (historical, not real time).",
+             'Harmonized results and annual ranking are provisional; VIIRS estimates still need local validation.']
+    season = cards.get('season') or {}
+    if season.get('months'):
+        ms = season['months']
+        label = f'{months[ms[0]-1]} to {months[ms[-1]-1]}' if len(ms) > 1 else months[ms[0]-1]
+        lines.append(f"· Historical season: *{label}* (peak: {months[season['peak_month']-1]}).")
+    if cards.get('most_active_year'):
+        lines.append(f"· Most active year (provisional): *{cards['most_active_year']['period_year']}*.")
+    last = cards.get('last_month')
+    if last:
+        comparison = f"{last['delta_pct']:+.0f}% vs historical median" if last.get('delta_pct') is not None else 'insufficient history for comparison'
+        lines.append(f"· Latest month: {months[last['period_index']-1]} {last['period_year']} ({comparison}).")
+    flagged = []
+    for yi, year in enumerate(cal['years']):
+        if year not in cal['years'][-years_back:]:
+            continue
+        for xi, level in enumerate(cal['levels'][yi]):
+            if level in ('alto', 'extremo'):
+                flagged.append((year, xi, level, cal['values'][yi][xi]))
+    if flagged:
+        lines.append('· Above-normal periods in recent years:')
+        for year, month, level, value in flagged[-6:]:
+            lines.append(f"   {'◆' if level == 'extremo' else '▲'} {months[month]} {year}: {n(value)} cell-days")
+    else:
+        lines.append('· No above-normal periods marked in recent years.')
+    lines.append(f"Raw heat detections in the series: {n(cards.get('total_detections'))}.")
+    lines.append('_Historical satellite summary, not a confirmed fire or official warning._')
+    return '\n'.join(lines)[:MAX_LEN]

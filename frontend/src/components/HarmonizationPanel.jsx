@@ -16,7 +16,7 @@ export default function HarmonizationPanel({ data }) {
     </div>
     <div className="mt-3 space-y-2 text-[12px] leading-relaxed text-mist">
       <p>The main measure is cell-days with heat detections: each {meta.cell_deg}° cell counts once per day across the sensors. This reduces duplicates but does not eliminate differences in resolution or coverage. Raw hotspots count individual detections.</p>
-      <p>Estimated periods are marked with hatching. The use of the union/MODIS factor for periods with VIIRS but no MODIS is under review; harmonized figures and rankings are provisional.</p>
+      <p>Estimated periods are marked with hatching. MODIS-only periods use the union/MODIS factor; VIIRS-only periods use a separately calibrated union/VIIRS factor. Without sufficient VIIRS calibration, its estimate is unavailable. Results and rankings remain provisional until validated for the dataset.</p>
       <p>Anomalies compare a period with the same period (±1) in other years. Thresholds are percentiles {th.high} and {th.extreme}, requiring at least {th.min_history_years} historical years and {th.min_value} cell-days. Symbols supplement color.</p>
       <p>FIRMS source types include vegetation, volcanoes, industrial sources and offshore detections; these types are not currently excluded by default.</p>
       <p className="rounded-lg border border-amber-400/30 bg-amber-400/10 p-3 text-amber-100">Recent years may be incomplete or revised; coverage ends {meta.coverage.end}. The factor assumes stable sensor sensitivity and does not model algorithm changes or sensor loss.</p>
@@ -70,8 +70,8 @@ export default function HarmonizationPanel({ data }) {
         </p>
         <p>
           <strong className="text-white">Qué es “estimado”.</strong> Cuando solo hay detecciones de un sensor en un periodo,
-          el programa aplica un factor y marca el valor con trama. Se está revisando el uso del factor unión/MODIS en
-          periodos con VIIRS sin MODIS; por ello las cifras armonizadas son provisionales.
+          el programa aplica un factor y marca el valor con trama: unión/MODIS para MODIS y unión/VIIRS para VIIRS.
+          Si falta calibración para VIIRS, no se estima ese periodo. Los resultados siguen siendo provisionales hasta validarlos con los datos locales.
         </p>
         <p>
           <strong className="text-white">Anomalías.</strong> Cada periodo se compara con el mismo periodo (±1) de los

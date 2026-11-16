@@ -46,6 +46,15 @@ def test_holdout_year_never_used_in_factors():
     assert len(results['years']) == 7
 
 
+def test_viirs_holdout_uses_viirs_factor_not_modis():
+    results = validation.validate(aggregated(), config(), date(2000, 1, 1), date(2018, 12, 31), sensor='viirs')
+    target = next(r for r in results['years'] if r['year'] == 2018)
+    # Training union/VIIRS = 20/10; held VIIRS = 90 in each month.
+    assert target['estimated'] == pytest.approx(2160)
+    assert target['observed'] == 1200
+    assert target['signed_error_pct'] == pytest.approx(80)
+
+
 def test_partial_and_missing_sensor_excluded():
     agg = aggregated()
     agg.loc[(agg.period_year == 2016) & (agg.period_index == 9), 'viirs_cd'] = 0

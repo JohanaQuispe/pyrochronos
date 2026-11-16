@@ -97,8 +97,12 @@ class Telegram:
         return self.call("sendLocation", **params)
 
 
-def main_keyboard() -> dict:
-    """Tres botones: lo único que un brigadista necesita con guantes puestos."""
+def main_keyboard(language: str = 'es') -> dict:
+    """Botones grandes en el idioma elegido."""
+    if language == 'en':
+        return {'keyboard': [[{'text': '📍 Share my location', 'request_location': True}],
+                             [{'text': '⚙️ Alert distance'}, {'text': 'ℹ️ My status'}],
+                             [{'text': '❓ Help'}]], 'resize_keyboard': True, 'is_persistent': True}
     return {
         "keyboard": [
             [{"text": "📍 Compartir mi ubicación", "request_location": True}],
@@ -176,13 +180,18 @@ def register_location(cfg: Config, tg: Telegram, msg: dict) -> None:
         chat_id=chat_id,
     )
     is_group = chat.get("type") in ("group", "supergroup")
-    text = (
-        f"✅ *Listo*\nTe aviso si se detecta un fuego a menos de *{rec['radius_km']:.0f} km* de aquí.\n\n"
-        "Toca *⚙️ Distancia de aviso* para cambiarlo."
-    )
-    if is_group:
-        text += "\n\n_En este grupo todos ven la ubicación que compartiste._"
-    tg.text(chat_id, text, main_keyboard())
+    language = rec.get('language', 'es')
+    if language == 'en':
+        text = (f"✅ *Saved*\nI can alert you about qualifying heat detections within *{rec['radius_km']:.0f} km* of this location.\n\n"
+                "Tap *⚙️ Alert distance* to change it.")
+        if is_group:
+            text += '\n\n_Everyone in this group can see the location you shared._'
+    else:
+        text = (f"✅ *Listo*\nTe aviso de detecciones de calor que cumplan el criterio a menos de *{rec['radius_km']:.0f} km* de aquí.\n\n"
+                "Toca *⚙️ Distancia de aviso* para cambiarlo.")
+        if is_group:
+            text += "\n\n_En este grupo todos ven la ubicación que compartiste._"
+    tg.text(chat_id, text, main_keyboard(language))
 
 
 def show_state(cfg: Config, tg: Telegram, chat_id, user_id) -> None:
@@ -190,6 +199,25 @@ def show_state(cfg: Config, tg: Telegram, chat_id, user_id) -> None:
     mine = fences.get(str(user_id))
     recent, meta = nrt.load_recent(cfg)
     summary = groundtruth.verdict_summary(cfg)
+    language = (mine or {}).get('language', 'es')
+    if language == 'en':
+        lines = ['*Your status*']
+        if mine and mine.get('lat') is not None and mine.get('lon') is not None:
+            lines.append(f"📍 Shared location: {mine['lat']:.4f}, {mine['lon']:.4f}")
+            lines.append(f"📏 Alert distance: *{mine['radius_km']:.0f} km*")
+        else:
+            lines.append('📍 No location yet: tap *Share my location*.')
+        if recent is None:
+            lines.append('Recent data: none loaded; this does not mean there are no hotspots.')
+        else:
+            lines.append(f"Detections in stored NRT file: {len(recent)}; downloaded: {meta.get('fetched_at') or 'unknown'}.")
+            lines.append('The file may be outdated and does not confirm fires.')
+        lines.append(f"✅ Team reports saved: {summary['total']}")
+        for code, count in summary['counts'].items():
+            if count:
+                lines.append(f"   {geofence.EN_VERDICTS[code]}: {count}")
+        tg.text(chat_id, '\n'.join(lines), main_keyboard(language))
+        return
     lines = ["*Tu estado*"]
     if mine and mine.get('lat') is not None and mine.get('lon') is not None:
         lines.append(f"📍 Estás en: {mine['lat']:.4f}, {mine['lon']:.4f}")
@@ -214,9 +242,23 @@ def handle_message(cfg: Config, tg: Telegram, msg: dict, dataset: Dataset, zone:
     user_id = (msg.get("from") or {}).get("id", chat_id)
     raw = msg.get("text") or ""
     text = normalize_command(raw).lower()
+    if text.startswith(('/language', '/idioma')):
+        parts = text.split()
+        if len(parts) != 2 or parts[1] not in ('en', 'es'):
+            tg.text(chat_id, 'Elige /language en o /idioma es · Choose /language en or /idioma es.')
+        else:
+            language = parts[1]
+            groundtruth.set_language(cfg, user_id, language)
+            tg.text(chat_id, 'Language set to English.' if language == 'en' else 'Idioma cambiado a español.', main_keyboard(language))
+        return
+    language = groundtruth.load_geofences(cfg).get(str(user_id), {}).get('language', 'es')
 
     if "location" in msg:
         register_location(cfg, tg, msg)
+        return
+
+    if language == 'en':
+        _handle_english_message(cfg, tg, text, raw, chat_id, user_id, dataset, zone)
         return
 
     # Botones y sinónimos, en lenguaje llano
@@ -252,10 +294,63 @@ def handle_message(cfg: Config, tg: Telegram, msg: dict, dataset: Dataset, zone:
     tg.text(chat_id, reply, main_keyboard())
 
 
+def _handle_english_message(cfg, tg, text, raw, chat_id, user_id, dataset, zone):
+    keyboard = main_keyboard('en')
+    if text.startswith('/start') or 'share my location' in text:
+        tg.text(chat_id, '*PyroChronos · field support*\nI can alert you about nearby heat detections above an intensity threshold when the bot is running and recent data are loaded. A detection does not confirm a fire.\n\n1. Tap *📍 Share my location*.\n2. Choose an alert distance.\n3. Use the buttons to report what you found.\n\n_Not an official warning._', keyboard)
+        return
+    if text.startswith('/help') or 'help' in text:
+        tg.text(chat_id, 'Share your location, choose an alert distance and check your status. Commands: /distance 15, /status, /language en or /idioma es. In a group everyone sees a shared location; use a private chat for privacy.', keyboard)
+        return
+    if 'distance' in text or text.startswith(('/distance', '/radio')):
+        current = groundtruth.load_geofences(cfg).get(str(user_id), {}).get('radius_km')
+        value = parse_radius(text)
+        if value is None:
+            tg.text(chat_id, 'How many kilometers away should alerts cover? Choose an option:', radius_keyboard(current))
+            return
+        rec = groundtruth.set_radius(cfg, user_id, value) or {}
+        msg = f'Saved: *{value:.0f} km*. '
+        msg += 'Now tap *📍 Share my location*.' if rec.get('lat') is None else 'Alerts cover this radius around your shared location.'
+        tg.text(chat_id, msg, keyboard)
+        return
+    if text.startswith('/status') or 'my status' in text:
+        show_state(cfg, tg, chat_id, user_id)
+        return
+    tg.text(chat_id, assistant.answer_question(raw, cfg, dataset, cfg.zone_bbox(zone), cfg.zone_name(zone), language='en'), keyboard)
+
+
 def handle_callback(cfg: Config, tg: Telegram, cb: dict) -> None:
     data = str(cb.get("data") or "")
     user_id = (cb.get("from") or {}).get("id")
     chat_id = (cb.get("message") or {}).get("chat", {}).get("id")
+    language = groundtruth.load_geofences(cfg).get(str(user_id), {}).get('language', 'es')
+
+    if language == 'en':
+        if data.startswith('r:'):
+            try:
+                value = float(data.split(':', 1)[1])
+                if not 1 <= value <= 100:
+                    raise ValueError('invalid radius')
+            except ValueError:
+                tg.call('answerCallbackQuery', callback_query_id=cb['id'], text='Invalid option.')
+                return
+            rec = groundtruth.set_radius(cfg, user_id, value) or {}
+            tg.call('answerCallbackQuery', callback_query_id=cb['id'], text=f'Saved: {value:.0f} km')
+            if chat_id:
+                suffix = ' Now tap *📍 Share my location*.' if rec.get('lat') is None else ' Alerts cover this radius.'
+                tg.text(chat_id, f'Saved: *{value:.0f} km*.' + suffix, main_keyboard('en'))
+            return
+        parsed = geofence.parse_callback(data)
+        if not parsed:
+            tg.call('answerCallbackQuery', callback_query_id=cb['id'], text='Unknown option.')
+            return
+        hotspot_id, verdict = parsed
+        groundtruth.save_verdict(cfg, hotspot_id, user_id, verdict)
+        label = geofence.EN_VERDICTS[verdict]
+        tg.call('answerCallbackQuery', callback_query_id=cb['id'], text=f'Recorded: {label}')
+        if chat_id:
+            tg.text(chat_id, f"✅ Saved: *{label}*\nTeam reports: {groundtruth.verdict_summary(cfg)['total']}")
+        return
 
     # Cambio de distancia desde los botones
     if data.startswith("r:"):
@@ -343,15 +438,48 @@ def check_alerts(cfg: Config, tg: Telegram, zone: str, dataset: Dataset) -> int:
             hit = hit.to_dict()
             if groundtruth.already_sent(cfg, target, hit["hotspot_id"]):
                 continue
-            tg.text(target, geofence.alert_text(hit, fence.get("radius_km", DEFAULT_RADIUS), zone=cfg.zone_name(zone)),
-                    geofence.inline_keyboard(hit["hotspot_id"]))
+            language = fence.get('language', 'es')
+            tg.text(target, geofence.alert_text(hit, fence.get("radius_km", DEFAULT_RADIUS), zone=cfg.zone_name(zone), language=language),
+                    geofence.inline_keyboard(hit["hotspot_id"], language=language))
             try:
                 tg.location(target, float(hit["lat"]), float(hit["lon"]))
             except RuntimeError:
-                pass  # el pin es un extra: si falla, el texto ya llegó
+                pass  # el pin es un extra: Telegram aceptó el texto, pero no confirma lectura
             groundtruth.mark_sent(cfg, target, hit["hotspot_id"])
             sent += 1
     return sent
+
+
+def diagnose_live(cfg: Config, dataset: Dataset, zone: str) -> dict:
+    """Solo lectura: candidatos reales según los mismos filtros, sin enviar ni alterar deduplicación."""
+    recent, meta = nrt.load_recent(cfg)
+    bbox = cfg.zone_bbox(zone)
+    fences = groundtruth.active_geofences(cfg)
+    result = {'downloaded': recent is not None, 'fresh_and_covered': fresh_for_zone(meta, bbox),
+              'fetched_at': meta.get('fetched_at'), 'fences': len(fences), 'matches': 0, 'new': 0}
+    if recent is None or recent.empty or not result['fresh_and_covered']:
+        return result
+    w, s, e, n = bbox
+    latest = (datetime.now(timezone.utc).date() - datetime(1970, 1, 1, tzinfo=timezone.utc).date()).days
+    inside = recent[(recent['lat'] >= s) & (recent['lat'] <= n) & (recent['lon'] >= w) & (recent['lon'] <= e)
+                    & (recent['day'] >= latest - 2) & (recent['day'] <= latest)]
+    if inside.empty:
+        return result
+    marked = geofence.mark_critical(inside, history=zone_hotspots(cfg, dataset, zone)).reset_index(drop=True)
+    marked['hotspot_id'] = [f'nrt-{int(r.day)}-{r.lat:.3f}-{r.lon:.3f}-{int(r.source)}' for r in marked.itertuples()]
+    seen = set()
+    for fence in fences:
+        target = str(fence.get('chat_id') or fence['telegram_id'])
+        hits = geofence.nearest(marked, fence['lat'], fence['lon'], fence.get('radius_km', DEFAULT_RADIUS))
+        for _, hit in hits.iterrows():
+            key = (target, hit['hotspot_id'])
+            if key in seen:
+                continue
+            seen.add(key)
+            result['matches'] += 1
+            if not groundtruth.already_sent(cfg, target, hit['hotspot_id']):
+                result['new'] += 1
+    return result
 
 
 def poll(cfg: Config, tg: Telegram, dataset: Dataset, zone: str, interval: int, once: bool,
@@ -406,6 +534,7 @@ def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description="Bot de campo de PyroChronos (avisos de fuego cerca de ti).")
     ap.add_argument("--zone", default=None, help="zona de config.yaml (por defecto la principal)")
     ap.add_argument("--dry-run", action="store_true", help="imprime el aviso de ejemplo sin enviar nada")
+    ap.add_argument("--check-live", action="store_true", help="diagnostica candidatos reales guardados sin enviar ni cambiar estado")
     ap.add_argument("--send-demo", action="store_true", help="envía el ejemplo marcado como DEMO")
     ap.add_argument("--poll", action="store_true", help="escucha mensajes y avisa")
     ap.add_argument("--once", action="store_true", help="una sola pasada y sale")
@@ -421,6 +550,14 @@ def main(argv: list[str] | None = None) -> int:
     cfg = load_config()
     ds = load_dataset(cfg)
     zone = args.zone or cfg.default_zone
+
+    if args.check_live:
+        info = diagnose_live(cfg, ds, zone)
+        print(f"Zona: {cfg.zone_name(zone)} · última descarga UTC: {info['fetched_at'] or 'desconocida'}")
+        print(f"Archivo cargado: {'sí' if info['downloaded'] else 'no'} · fresco y cubre la zona: {'sí' if info['fresh_and_covered'] else 'no'}")
+        print(f"Ubicaciones registradas: {info['fences']} · coincidencias con el criterio: {info['matches']} · pendientes de enviar: {info['new']}")
+        print('Solo diagnóstico: no envía mensajes y no altera el historial. Una coincidencia no confirma que Telegram haya entregado una alerta.')
+        return 0
 
     if args.dry_run:
         row, top = sample_alert(cfg, ds, zone)

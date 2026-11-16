@@ -121,8 +121,10 @@ def nearest(
     return work.sort_values("distance_km").head(limit).reset_index(drop=True)
 
 
-def alert_text(row: dict | pd.Series, radius_km: float = DEFAULT_RADIUS_KM, zone: str | None = None) -> str:
+def alert_text(row: dict | pd.Series, radius_km: float = DEFAULT_RADIUS_KM, zone: str | None = None, language: str = 'es') -> str:
     """Texto del aviso: cifras reales, sin adjetivos de mas."""
+    if language == 'en':
+        return _alert_text_english(row, zone)
     get = row.get if isinstance(row, dict) else (lambda k, d=None: row[k] if k in row else d)
     dist = float(get("distance_km", float("nan")))
     card = get("cardinal", "")
@@ -167,12 +169,60 @@ def alert_text(row: dict | pd.Series, radius_km: float = DEFAULT_RADIUS_KM, zone
     return "\n".join(lines)
 
 
-def inline_keyboard(hotspot_id: int | str) -> dict:
+def _alert_text_english(row, zone=None):
+    get = row.get
+    lines = ['🚨 *Alert: nearby heat detection*', 'A satellite detected a heat signal that meets the bot’s intensity threshold.']
+    if zone:
+        lines.append(f'Monitored area: {zone}')
+    try:
+        distance = float(get('distance_km', float('nan')))
+        if math.isfinite(distance):
+            cardinal = get('cardinal', '')
+            cardinal = {'O': 'W', 'SO': 'SW', 'NO': 'NW'}.get(cardinal, cardinal)
+            lines.append(f"📍 {distance:.1f} km {cardinal} of your shared location (straight-line distance).")
+    except (TypeError, ValueError):
+        pass
+    try:
+        lat, lon = float(get('lat')), float(get('lon'))
+        if math.isfinite(lat) and math.isfinite(lon) and -90 <= lat <= 90 and -180 <= lon <= 180:
+            lines.append(f'Coordinates: `{lat:.4f}, {lon:.4f}`')
+            lines.append(f'Map: https://www.google.com/maps/search/?api=1&query={lat:.4f},{lon:.4f}')
+    except (TypeError, ValueError):
+        pass
+    day = get('day_label')
+    if not day:
+        try:
+            day = str(pd.to_datetime(int(get('day')), unit='D', utc=True).date())
+        except (TypeError, ValueError, OverflowError):
+            day = 'date unavailable'
+    time_utc = get('time_utc') or ''
+    sensor = get('sensor') or {1: 'MODIS', 2: 'VIIRS'}.get(get('source'), 'satellite')
+    conf = {0: 'low', 1: 'nominal', 2: 'high'}.get(get('conf_level'), 'unavailable')
+    lines.append(f'🛰️ Detected: {day} {time_utc} (UTC) · {sensor} · confidence {conf}')
+    if not time_utc:
+        lines.append('Detection time unavailable; date is UTC.')
+    try:
+        frp, threshold = float(get('frp', float('nan'))), float(get('frp_p95', float('nan')))
+        if math.isfinite(frp):
+            lines.append(f'Thermal intensity (FRP): {frp:.0f} MW' + (f'; sensor historical threshold: {threshold:.0f} MW' if math.isfinite(threshold) else ''))
+    except (TypeError, ValueError):
+        pass
+    lines.append('This alert is based on thermal intensity and distance; it does not measure proximity to homes or risk of spread.')
+    lines.append('Wind and access information are unavailable. Consult operational sources before acting.')
+    lines.append('_Not a confirmed fire or official warning. Verify in the field before dispatching._')
+    return '\n'.join(lines)
+
+
+EN_VERDICTS = {'fuego_real': '🔥 Real fire', 'quema_agricola': '🌾 Agricultural burn', 'falsa_alarma': '❌ False alarm'}
+
+
+def inline_keyboard(hotspot_id: int | str, language: str = 'es') -> dict:
     """Tres botones de validación en campo (callback_data corto: límite 64 bytes)."""
+    labels = EN_VERDICTS if language == 'en' else VERDICTS
     return {
         "inline_keyboard": [
             [{"text": label, "callback_data": f"gt:{hotspot_id}:{code}"}]
-            for code, label in VERDICTS.items()
+            for code, label in labels.items()
         ]
     }
 

@@ -1,5 +1,8 @@
 # PyroChronos: cifras y alcance para la presentación
 
+> **Actualización del método:** se corrigió el uso del factor: los periodos con solo VIIRS ahora usan una calibración independiente unión/VIIRS; si no hay evidencia suficiente no se estima ese periodo. Las cifras y tablas anteriores se conservan como salida histórica, **no corresponden al método corregido**. Falta recalcular con el parquet local y validar VIIRS con `python backend/scripts/validacion_retrospectiva.py --sensor viirs`; las cifras y rankings siguen siendo provisionales. La presencia de detecciones no garantiza cobertura completa.
+
+
 > **Pendiente de revisión:** estas cifras proceden de la salida de `numeros_pitch.py` que la
 > participante ejecutó sobre sus propios archivos locales. El parquet del repositorio es otro
 > conjunto y dará resultados distintos. No presentar el orden de años como definitivo hasta resolver
@@ -33,11 +36,9 @@ Según esa serie mensual calculada, agosto, septiembre y octubre representan **2
 
 ### Limitación importante que revisar antes de usar el ranking o los totales
 
-En la implementación actual, cuando un periodo tiene VIIRS pero no MODIS, el programa también
-multiplica VIIRS por el factor calibrado como unión/MODIS. Ese factor no está calibrado para
-convertir VIIRS por sí solo a la unión. Puede inflar estimaciones, especialmente cuando falta MODIS.
-Hay que corregir o justificar el método, ejecutar de nuevo el cálculo con los archivos locales y
-comprobar las cifras antes de presentarlas como resultado definitivo.
+La versión anterior multiplicaba VIIRS por el factor unión/MODIS, lo que podía inflar los valores.
+Ahora se usa un factor unión/VIIRS independiente o se indica que no hay estimación si faltan datos.
+Hay que validar VIIRS y recalcular con los archivos locales antes de presentar cifras o ranking.
 
 ## Validación retrospectiva (reproducible)
 
@@ -53,7 +54,7 @@ anual **19,70 %** (2025). Ver [los resultados por año](validacion-retrospectiva
 
 El entrenamiento puede incluir años posteriores al año evaluado. La unión de sensores **no es verdad
 de campo**: esto no mide la precisión de detección de incendios. Tampoco valida directamente las
-estimaciones anteriores a 2012 ni corrige el caso de VIIRS sin MODIS. Cada año evaluado tiene
+estimaciones anteriores a 2012 ni valida por sí sola las estimaciones desde VIIRS. Cada año evaluado tiene
 detecciones de ambos sensores en los 12 meses, lo que no garantiza cobertura completa.
 
 El parquet de ejemplo del repositorio es distinto y dio **7,63 %** de mediana; no mezclar sus
@@ -71,7 +72,7 @@ no están implementados.
 
 ## Comprobación antes de presentar
 
-- [ ] Resolver la limitación de armonización para periodos con VIIRS sin MODIS y recalcular con el parquet local.
+- [ ] Validar la corrección para VIIRS sin MODIS y recalcular con el parquet local.
 - [ ] Revisar calendario, zona, fechas, mapa y descarga de reportes con los datos locales.
 - [ ] Comprobar fecha y cobertura de los datos recientes antes de interpretarlos.
 - [ ] Probar aviso y pin en Telegram; no mostrar credenciales en pantalla.

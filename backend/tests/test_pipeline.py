@@ -245,6 +245,17 @@ def test_reporte_ejecutivo_es_html_con_cifras(client):
     assert "NASA FIRMS" in html
 
 
+def test_english_report_and_bulletin(client):
+    report = client.get('/api/report', params={'zone': 'madrededios', 'language': 'en'})
+    assert report.status_code == 200 and '<html lang="en">' in report.text
+    assert 'Provisional results' in report.text and 'not confirmed fires' in report.text
+    assert 'union/VIIRS' in report.text
+    bulletin = client.get('/api/bulletin', params={'zone': 'peru', 'language': 'en'})
+    assert bulletin.status_code == 200
+    assert 'historical, not real time' in bulletin.json()['text']
+    assert 'provisional' in bulletin.json()['text']
+
+
 def test_reporte_rechaza_fechas_invertidas(client):
     r = client.get("/api/report", params={"zone": "peru", "start": "2025-01-01", "end": "2010-01-01"})
     assert r.status_code == 400

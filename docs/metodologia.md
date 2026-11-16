@@ -1,5 +1,8 @@
 # Metodología de armonización
 
+> **Actualización del método:** se corrigió el uso del factor: los periodos con solo VIIRS ahora usan una calibración independiente unión/VIIRS; si no hay evidencia suficiente no se estima ese periodo. Las cifras y tablas anteriores se conservan como salida histórica, **no corresponden al método corregido**. Falta recalcular con el parquet local y validar VIIRS con `python backend/scripts/validacion_retrospectiva.py --sensor viirs`; las cifras y rankings siguen siendo provisionales. La presencia de detecciones no garantiza cobertura completa.
+
+
 Objetivo: reducir las diferencias entre sensores para facilitar la comparación histórica, sin
 suponer que son equivalentes. Las estimaciones tienen incertidumbre y limitaciones declaradas.
 
@@ -71,15 +74,15 @@ factores por mes o semana, pero por sí sola no demuestra la causa de las difere
 
 ```
 si el periodo tiene AMBOS satélites →  valor = celdas-día observadas (sin estimación)
-si solo tiene MODIS            →  valor = modis_cd × factor(p)          [ESTIMADO]
-                                    banda = [modis_cd × p25(p), modis_cd × p75(p)]
-si solo tiene VIIRS            →  valor = viirs_cd × factor(p)          [ESTIMADO]
+si solo tiene MODIS            →  valor = modis_cd × factor_unión_MODIS(p) [ESTIMADO]
+si solo tiene VIIRS            →  valor = viirs_cd × factor_unión_VIIRS(p) [ESTIMADO]
+                                    si no hay factor VIIRS suficiente → sin estimación
 ```
 
-Los valores estimados se dibujan con **trama rayada**. También puede haber periodos estimados después
-de 2012. **Limitación pendiente:** aplicar el factor unión/MODIS a VIIRS sin MODIS no está justificado
-por esa calibración y puede inflar el resultado; el ranking y el total armonizado siguen siendo
-provisionales hasta corregir o justificar ese caso.
+Los valores estimados se dibujan con **trama rayada**, usando bandas de percentiles separadas para cada sensor.
+También puede haber periodos estimados después de 2012. El método anterior usaba indebidamente unión/MODIS
+para VIIRS; ya fue corregido. El ranking y el total siguen siendo provisionales hasta validar la estimación
+VIIRS y recalcular con los datos locales. La presencia o ausencia de detecciones no garantiza cobertura.
 
 ## 5. Validación retrospectiva de la estimación desde MODIS
 
