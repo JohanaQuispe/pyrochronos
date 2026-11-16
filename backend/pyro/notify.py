@@ -34,7 +34,7 @@ def build_bulletin(cfg: Config, ds: Dataset, zone_key: str | None = None, years_
         return _english_bulletin(payload, years_back)
     lines = [f"*PyroChronos · {payload['meta']['zone']}*"]
     lines.append(f"Datos NASA FIRMS hasta {payload['meta']['coverage']['end']} (histórico, no tiempo real).")
-    lines.append("Cifras armonizadas provisionales: falta validar la estimación desde VIIRS y recalcular con los datos locales. No usar el ranking anual como definitivo.")
+    lines.append("Cifras estimadas y ranking anual provisionales. La validación depende de los datos, la zona y el periodo; no usarlos como definitivos.")
 
     if cards.get("season"):
         season = cards["season"]
@@ -112,7 +112,7 @@ def _english_bulletin(payload: dict, years_back: int) -> str:
     cards, cal, meta = payload['cards'], payload['calendar'], payload['meta']
     lines = [f"*PyroChronos · {meta['zone']}*",
              f"NASA FIRMS data through {meta['coverage']['end']} (historical, not real time).",
-             'Harmonized results and annual ranking are provisional; VIIRS estimates still need local validation.']
+             'Estimated results and annual ranking are provisional; validation depends on the data, area and period.']
     season = cards.get('season') or {}
     if season.get('months'):
         ms = season['months']

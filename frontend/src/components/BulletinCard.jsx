@@ -35,7 +35,7 @@ export default function BulletinCard({ zone }) {
         {t('Resume la zona seleccionada para compartirla si lo deseas. No se envía automáticamente y no es una alerta de focos recientes. Copiar el texto no lo envía a Telegram.', 'A summary of the selected area to share if you wish. It is not sent automatically and is not a recent-hotspot alert. Copying it does not send it to Telegram.')}
       </p>
       <p className="mt-3 rounded-xl border border-amber-300/30 bg-amber-300/10 px-3 py-2 text-[12px] leading-relaxed text-amber-100">
-        {t('Las cifras armonizadas y el ranking anual son provisionales; falta validar la estimación VIIRS con tus datos y recalcular.', 'Harmonized figures and annual rankings are provisional; the VIIRS estimate still needs validation with your data and recalculation.')}
+        {t('Las cifras estimadas y el ranking anual son provisionales; la validación depende de los datos y la zona.', 'Estimated figures and annual rankings are provisional; validation depends on the data and area.')}
       </p>
       {state.loading && <p className="mt-3 text-[13px] text-zinc-200">{t('Preparando el borrador…', 'Preparing draft…')}</p>}
       {state.error && <p role="alert" className="mt-3 text-[13px] text-red-200">{state.error}</p>}

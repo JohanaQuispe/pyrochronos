@@ -1,6 +1,6 @@
 # Metodología de armonización
 
-> **Actualización del método:** se corrigió el uso del factor: los periodos con solo VIIRS ahora usan una calibración independiente unión/VIIRS; si no hay evidencia suficiente no se estima ese periodo. Las cifras y tablas anteriores se conservan como salida histórica, **no corresponden al método corregido**. Falta recalcular con el parquet local y validar VIIRS con `python backend/scripts/validacion_retrospectiva.py --sensor viirs`; las cifras y rankings siguen siendo provisionales. La presencia de detecciones no garantiza cobertura completa.
+> **Actualización del método:** VIIRS usa un factor unión/VIIRS independiente. La participante comunicó la validación mensual de VIIRS y el recálculo de Perú con su parquet local; ver [validación VIIRS](validacion-viirs.md) y [cifras](pitch.md). Los resultados y rankings siguen siendo provisionales: la unión no es verdad de campo, la cobertura no está garantizada y la prueba no valida otras zonas ni periodos fuera del solape.
 
 
 Objetivo: reducir las diferencias entre sensores para facilitar la comparación histórica, sin
@@ -81,8 +81,9 @@ si solo tiene VIIRS            →  valor = viirs_cd × factor_unión_VIIRS(p) [
 
 Los valores estimados se dibujan con **trama rayada**, usando bandas de percentiles separadas para cada sensor.
 También puede haber periodos estimados después de 2012. El método anterior usaba indebidamente unión/MODIS
-para VIIRS; ya fue corregido. El ranking y el total siguen siendo provisionales hasta validar la estimación
-VIIRS y recalcular con los datos locales. La presencia o ausencia de detecciones no garantiza cobertura.
+para VIIRS; ya fue corregido. La participante comunicó la validación VIIRS mensual y el recálculo
+para Perú; ver `validacion-viirs.md`. El ranking y el total siguen siendo provisionales: la evaluación
+no garantiza cobertura ni valida todos los periodos o zonas.
 
 ## 5. Validación retrospectiva de la estimación desde MODIS
 

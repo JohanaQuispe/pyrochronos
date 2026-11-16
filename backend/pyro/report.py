@@ -256,7 +256,7 @@ def _english_report(payload: dict, alert: dict, zone_name: str) -> str:
 <style>body{{font:14px system-ui,sans-serif;color:#171717;max-width:1000px;margin:2em auto;padding:0 1em}}h1{{border-bottom:3px solid #f97316;padding-bottom:10px}}.notice{{background:#fff3da;padding:1em;border-left:4px solid #f97316}}table{{border-collapse:collapse;width:100%}}td,th{{border:1px solid #ddd;padding:4px;text-align:center;font-size:11px}}.cell{{color:#fff}}.estimated{{outline:2px dashed #eee;outline-offset:-3px}}.na{{background:#eee}}@media print{{button{{display:none}}}}</style></head><body>
 <button onclick="window.print()">Print / Save as PDF</button><h1>PyroChronos · Field report</h1>
 <p>{zone} · {html.escape(str(meta['start']))} to {html.escape(str(meta['end']))} · Generated {generated}</p>
-<p class="notice"><strong>Provisional results.</strong> The VIIRS-only estimate needs validation with the local dataset; do not treat totals or annual rankings as final. Heat detections are not confirmed fires.</p>
+<p class="notice"><strong>Provisional results.</strong> Estimates depend on the data, area and period; do not treat totals or annual rankings as final. Heat detections are not confirmed fires.</p>
 <h2>Seasonal indicator: {html.escape(level)}</h2>
 <p>Historical peak week: {html.escape(str(alert.get('peak_week', 'unavailable')))}. The indicator also incorporates recent detections when available. This is not a weather forecast or a prediction of ignitions. Consult official sources and verify in the field.</p>
 <h2>Overview</h2><p>Most active month: {month_label}; most active year: {html.escape(str((cards.get('most_active_year') or {}).get('period_year', '—')))}; raw detections in range: {number(cards.get('total_detections'))}.</p>

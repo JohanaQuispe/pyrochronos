@@ -15,5 +15,5 @@ def test_bulletin_warns_of_provisional_harmonization(monkeypatch):
     monkeypatch.setattr(notify, 'build_calendar', lambda *args, **kwargs: payload)
     message = notify.build_bulletin(cfg, ds)
     assert 'histórico, no tiempo real' in message
-    assert 'Cifras armonizadas provisionales' in message
-    assert 'No usar el ranking anual como definitivo' in message
+    assert 'Cifras estimadas y ranking anual provisionales' in message
+    assert 'no usarlos como definitivos' in message

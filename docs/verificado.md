@@ -1,6 +1,6 @@
 # VERIFICADO / POR VERIFICAR
 
-> **Actualización del método:** se corrigió el uso del factor: los periodos con solo VIIRS ahora usan una calibración independiente unión/VIIRS; si no hay evidencia suficiente no se estima ese periodo. Las cifras y tablas anteriores se conservan como salida histórica, **no corresponden al método corregido**. Falta recalcular con el parquet local y validar VIIRS con `python backend/scripts/validacion_retrospectiva.py --sensor viirs`; las cifras y rankings siguen siendo provisionales. La presencia de detecciones no garantiza cobertura completa.
+> **Actualización del método:** VIIRS usa un factor unión/VIIRS independiente. La participante comunicó la validación mensual de VIIRS y el recálculo de Perú con su parquet local; ver [validación VIIRS](validacion-viirs.md) y [cifras](pitch.md). Los resultados y rankings siguen siendo provisionales: la unión no es verdad de campo, la cobertura no está garantizada y la prueba no valida otras zonas ni periodos fuera del solape.
 
 
 ## Verificado (comprobado contra la fuente o con los datos en mano)
@@ -55,9 +55,9 @@
 
 - **Resultado comunicado por la participante:** `numeros_pitch.py` sobre su parquet local informa
   2 212 061 detecciones, desde 2000-11-11 hasta 2026-11-01. No es el parquet del repositorio.
-- **POR VERIFICAR antes de presentar totales o ranking:** ahora VIIRS usa un factor independiente;
-  falta ejecutar su validación y recalcular con el archivo local. Las cifras antiguas de `docs/pitch.md`
-  son provisionales y no reflejan este cambio.
+- **Resultado comunicado:** la participante ejecutó la validación mensual VIIRS para Perú y el
+  recálculo con su parquet; mediana del error absoluto anual 1,02 % en 14 años. Ver `validacion-viirs.md`.
+  `docs/pitch.md` contiene las cifras corregidas; totales y ranking siguen siendo provisionales.
 
 ## Mapa táctico y alertas: límites operativos
 
@@ -83,9 +83,10 @@
   horas. Filtra por distancia y FRP sobre p95 por sensor, con mínimo 20 MW: **no alerta sobre todos
   los focos**. No hay garantía de detección, tiempo de entrega o disponibilidad.
 - Las pruebas automáticas simulan FIRMS y Telegram, e incluyen falta de datos, fallos, datos viejos,
-  cobertura y duplicados. **POR VERIFICAR:** acceso real a las tres fuentes configuradas, consulta
-  en Telegram, actualización en ejecución y recepción de alerta y pin en el teléfono con la cuenta
-  de la participante. Es necesario dejar encendido el equipo y el proceso; no es un servicio 24/7.
+  cobertura y duplicados. La participante mostró dos confirmaciones periódicas de vigilancia recibidas
+  en Telegram y una descarga actualizada. **POR VERIFICAR:** recepción automática de una alerta real
+  por una detección cercana y de su pin. Es necesario dejar encendido el equipo y el proceso; no se
+  ha desplegado como servicio 24/7.
 - La resolución temporal guardada es el día UTC, no el minuto de detección. Un foco de calor puede
   no ser un incendio; no sustituye avisos oficiales ni confirmación en campo.
 

@@ -295,7 +295,7 @@ function AppContent() {
             <>
               {state.sources === 'both' && <div role="note" className="rounded-xl border border-amber-400/20 bg-amber-400/[0.05] px-4 py-3 text-[12px] leading-relaxed text-zinc-300">
                 <strong className="text-amber-200">{t('Cifras estimadas y ranking provisionales.', 'Estimated figures and rankings are provisional.')}</strong>
-                <details className="mt-1"><summary className="cursor-pointer">{t('¿Por qué?', 'Why?')}</summary><p className="mt-1">{t('Se usan factores distintos para MODIS y VIIRS. Aún falta validar VIIRS y recalcular las cifras con tus datos.', 'Separate factors are used for MODIS and VIIRS. VIIRS still needs validation and figures must be recalculated with your data.')}</p></details>
+                <details className="mt-1"><summary className="cursor-pointer">{t('¿Por qué?', 'Why?')}</summary><p className="mt-1">{t('Se combinan observaciones y estimaciones. La validación depende de los datos, la zona y el periodo; el orden de los años puede cambiar.', 'Observations and estimates are combined. Validation depends on the data, area and period; the ranking of years may change.')}</p></details>
               </div>}
               <CalendarHeatmap
                 data={data}
