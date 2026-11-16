@@ -37,9 +37,11 @@ def _logo() -> str:
     return ""
 
 
-def build_report_html(cfg: Config, ds: Dataset, bbox, zone_name: str, start, end, recent_selector=None) -> str:
+def build_report_html(cfg: Config, ds: Dataset, bbox, zone_name: str, start, end, recent_selector=None, language='es') -> str:
     payload = build_calendar(cfg, ds, bbox, start, end, "month", cfg.default_measure, "both", zone_name)
     alert = build_alert(cfg, ds, bbox, zone_name, recent_selector=recent_selector)
+    if language == 'en':
+        return _english_report(payload, alert, zone_name)
     cal = payload["calendar"]
     cards = payload["cards"]
     calib = payload["calibration"]
@@ -146,10 +148,10 @@ def build_report_html(cfg: Config, ds: Dataset, bbox, zone_name: str, start, end
 </header>
 
 <div class="box {level_class}">
-  <h3>{html.escape(alert['label'])} — {html.escape(alert['short'])}</h3>
+  <h3>{html.escape(alert.get('label', 'Sin información'))} — {html.escape(alert.get('short', 'Sin historial suficiente'))}</h3>
   <ul>{reasons}</ul>
-  <p><strong>Qué hacer:</strong> {html.escape(alert['action'])}</p>
-  <p class="sub">{html.escape(alert['disclaimer'])}</p>
+  <p><strong>Qué hacer:</strong> {html.escape(alert.get('action', 'Consultar fuentes oficiales y verificar en campo.'))}</p>
+  <p class="sub">{html.escape(alert.get('disclaimer', 'No es un pronóstico de incendios.'))}</p>
 </div>
 
 <div class="grid">
@@ -181,7 +183,7 @@ def build_report_html(cfg: Config, ds: Dataset, bbox, zone_name: str, start, end
   <span>Menos</span>
   {''.join(f'<span class="sw" style="background:{c}"></span>' for c in RAMP)}
   <span>Más</span>
-  <span>· · · borde punteado = valor estimado (antes de 2012, solo MODIS) · ▲ por encima de lo normal · ◆ muy por encima</span>
+  <span>· · · borde punteado = valor estimado (también puede ocurrir después de 2012) · ▲ por encima de lo normal · ◆ muy por encima</span>
 </div>
 
 <h2>Periodos extremos recientes (percentil ≥ {payload['thresholds']['extreme']})</h2>
@@ -195,13 +197,14 @@ def build_report_html(cfg: Config, ds: Dataset, bbox, zone_name: str, start, end
 <h2>Cómo se armonizó (y qué no sabemos)</h2>
 <div class="box">
   <p>Escala de referencia: actividad observada por los dos satélites juntos, en celdas-día de
-  {payload['meta']['cell_deg']}° (≈1,1 km), contando una celda una vez por día y satélite.</p>
-  <p>Factor VIIRS/MODIS: <strong>{calib['global_factor']}</strong>
+  {payload['meta']['cell_deg']}° (≈1,1 km), contando una celda una vez por día entre ambos sensores.</p>
+  <p>Factor unión/MODIS: <strong>{calib['global_factor']}</strong>
   (banda p25–p75: {calib['global_p25']} – {calib['global_p75']}); concordancia de las series en el solape:
   <strong>r = {calib['agreement_r']}</strong> sobre {calib['agreement_n']} periodos;
-  años de solape: {calib['overlap_years'][0]}–{calib['overlap_years'][-1] if calib['overlap_years'] else '—'}.</p>
-  <p>Antes de 2012 solo existe MODIS: esos valores se estiman multiplicando por el factor del mismo mes
-  y se marcan con borde punteado; su incertidumbre es la banda del factor. Desde 2012 el valor es observado.</p>
+  años de solape: {calib['overlap_years'][0] if calib['overlap_years'] else '—'}–{calib['overlap_years'][-1] if calib['overlap_years'] else '—'}.</p>
+  <p>Los periodos con ambos sensores usan la unión observada. Con solo MODIS se usa el factor unión/MODIS;
+  con solo VIIRS, unión/VIIRS, si hay calibración suficiente. Las estimaciones se marcan con borde punteado.
+  Los resultados y rankings siguen siendo provisionales y deben validarse con los datos locales.</p>
   <p><strong>Límites:</strong> el factor supone que la diferencia de sensibilidad entre satélites es estable;
   no modela cambios de versión ni la sustitución de Suomi-NPP por NOAA-20/21. Los años más recientes pueden
   ser reprocesados por NASA. El número de focos y las celdas-día no son intercambiables.</p>
@@ -214,3 +217,53 @@ def build_report_html(cfg: Config, ds: Dataset, bbox, zone_name: str, start, end
   Licencia del código: MIT. · {html.escape(cfg.disclaimer)}
 </footer>
 </body></html>"""
+
+
+def _english_report(payload: dict, alert: dict, zone_name: str) -> str:
+    """English print report built from structured values, without translating untrusted HTML."""
+    cards, cal, meta, calib = payload['cards'], payload['calendar'], payload['meta'], payload['calibration']
+    months = ('January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December')
+    season = cards.get('season') or {}
+    season_months = season.get('months') or []
+    season_label = ' to '.join(months[m - 1] for m in (season_months[0], season_months[-1])) if len(season_months) > 1 else (months[season_months[0] - 1] if season_months else 'Not available')
+    most = cards.get('most_active_month') or {}
+    month_label = months[most['period_index'] - 1] if most.get('period_index') else '—'
+    level = {'critico': 'Critical seasonal window', 'vigilancia': 'Seasonal watch', 'normal': 'Outside peak season'}.get(alert.get('level'), 'Unavailable') if alert.get('available', False) else 'Insufficient historical data'
+    rows = []
+    for yi, year in enumerate(cal['years']):
+        cells = []
+        for xi, v in enumerate(cal['values'][yi]):
+            if v is None:
+                cells.append('<td class="na" title="No data">—</td>')
+                continue
+            color = RAMP[max(0, _bucket(v, cal['max_value'] or 1))]
+            glyph = {'extremo': '◆', 'alto': '▲'}.get(cal['levels'][yi][xi], '')
+            estimated = ' estimated' if cal['estimated'][yi][xi] else ''
+            cells.append(f'<td class="cell{estimated}" style="background:{color}">{glyph or int(round(v))}</td>')
+        rows.append(f'<tr><th>{year}</th>{"".join(cells)}</tr>')
+    viirs_factor = calib.get('viirs_global_factor')
+    def number(value):
+        return '—' if value is None else n(value)
+    recent = alert.get('recent') or {}
+    if recent.get('available'):
+        rmeta = recent.get('meta') or {}
+        recent_text = f"{number(recent.get('total', 0))} detections in this area; downloaded {html.escape(str(rmeta.get('fetched_at') or 'unknown'))}. Data may be outdated; coverage must be checked."
+    else:
+        recent_text = 'No recent data are loaded. This does not mean there are no hotspots.'
+    zone = html.escape(zone_name)
+    generated = datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M UTC')
+    return f'''<!doctype html><html lang="en"><head><meta charset="utf-8"><title>PyroChronos · Field report · {zone}</title>
+<style>body{{font:14px system-ui,sans-serif;color:#171717;max-width:1000px;margin:2em auto;padding:0 1em}}h1{{border-bottom:3px solid #f97316;padding-bottom:10px}}.notice{{background:#fff3da;padding:1em;border-left:4px solid #f97316}}table{{border-collapse:collapse;width:100%}}td,th{{border:1px solid #ddd;padding:4px;text-align:center;font-size:11px}}.cell{{color:#fff}}.estimated{{outline:2px dashed #eee;outline-offset:-3px}}.na{{background:#eee}}@media print{{button{{display:none}}}}</style></head><body>
+<button onclick="window.print()">Print / Save as PDF</button><h1>PyroChronos · Field report</h1>
+<p>{zone} · {html.escape(str(meta['start']))} to {html.escape(str(meta['end']))} · Generated {generated}</p>
+<p class="notice"><strong>Provisional results.</strong> The VIIRS-only estimate needs validation with the local dataset; do not treat totals or annual rankings as final. Heat detections are not confirmed fires.</p>
+<h2>Seasonal indicator: {html.escape(level)}</h2>
+<p>Historical peak week: {html.escape(str(alert.get('peak_week', 'unavailable')))}. The indicator also incorporates recent detections when available. This is not a weather forecast or a prediction of ignitions. Consult official sources and verify in the field.</p>
+<h2>Overview</h2><p>Most active month: {month_label}; most active year: {html.escape(str((cards.get('most_active_year') or {}).get('period_year', '—')))}; raw detections in range: {number(cards.get('total_detections'))}.</p>
+<p>Historical season: {season_label}. Estimates depend on available data and do not establish current fire activity.</p>
+<h2>Activity calendar</h2><p>Rows are years and columns are months. Dashed outlines indicate estimates; ▲ and ◆ indicate above-normal and extreme periods.</p>
+<table><tr><th>Year</th>{''.join(f'<th>{m[:3]}</th>' for m in months)}</tr>{''.join(rows)}</table>
+<h2>Recent stored detections</h2><p>{recent_text}</p>
+<h2>Method and limits</h2><p>Daily grid-cell counts use the union of both sensors without counting the same cell twice on the same day. When only one sensor has detections, a separate union/MODIS or union/VIIRS ratio from overlapping years is used. If VIIRS calibration is insufficient, that estimate is unavailable.</p>
+<p>Global union/MODIS factor: {html.escape(str(calib.get('global_factor')))}; union/VIIRS: {html.escape(str(viirs_factor if viirs_factor is not None else 'unavailable'))}. Sensor detection counts do not prove complete coverage. The satellite union is not ground truth, and factors may vary over time.</p>
+<footer>NASA FIRMS · MODIS and VIIRS · MIT · Data can be revised by NASA. Verify information before dispatching.</footer></body></html>'''

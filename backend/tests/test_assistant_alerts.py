@@ -93,6 +93,19 @@ def test_chat_endpoint(cfg, monkeypatch, ds):
     assert client.post('/api/assistant', json={'question': ' ', 'zone': 'peru'}).status_code == 400
 
 
+def test_english_assistant_endpoint(cfg, monkeypatch, ds):
+    import api.main as main
+    monkeypatch.setattr(main, 'cfg', cfg)
+    monkeypatch.setattr(main, 'dataset', lambda: ds)
+    client = TestClient(main.app)
+    response = client.post('/api/assistant', json={'question': 'Are there recent hotspots?', 'zone': 'peru', 'language': 'en'})
+    assert response.status_code == 200
+    assert 'no recent data are loaded' in response.json()['answer'].lower()
+    reply = assistant.answer_question('How do I receive alerts?', cfg, ds, cfg.zone_bbox('peru'), 'Perú', language='en')
+    assert 'share your location' in reply and 'not for every fire' in reply
+    assert client.post('/api/assistant', json={'question': 'hello', 'language': 'xx'}).status_code == 422
+
+
 def test_bot_uses_same_answer(bot, cfg, ds):
     class FakeTelegram:
         def text(self, chat_id, text, keyboard=None): self.answer = text
@@ -126,10 +139,14 @@ def test_alert_fresh_only_and_no_duplicates(bot, cfg, ds):
         def text(self, target, message, keyboard=None): self.messages.append(message)
         def location(self, target, lat, lon): self.locations.append((lat, lon))
     tg = FakeTelegram()
+    diagnostic = bot.diagnose_live(cfg, ds, 'peru')
+    assert diagnostic['fresh_and_covered'] and diagnostic['matches'] == 1 and diagnostic['new'] == 1
+    assert not groundtruth.load_sent(cfg)  # diagnosis must not record or send anything
     assert bot.check_alerts(cfg, tg, 'peru', ds) == 1
     assert len(tg.messages) == 1 and len(tg.locations) == 1
     assert 'ni un aviso oficial' in tg.messages[0]
     assert bot.check_alerts(cfg, tg, 'peru', ds) == 0
+    assert bot.diagnose_live(cfg, ds, 'peru')['new'] == 0
 
 
 def test_refresh_failure_does_not_overwrite(bot, cfg, monkeypatch):
@@ -174,3 +191,38 @@ def test_telegram_connection_error_does_not_expose_token(bot, monkeypatch):
     with pytest.raises(RuntimeError) as error:
         bot.Telegram('SECRET').call('sendMessage')
     assert 'SECRET' not in str(error.value)
+
+
+def test_live_alert_filters_and_send_failure_retry(bot, cfg, ds):
+    now = datetime.now(timezone.utc)
+    day = (now.date() - datetime(1970, 1, 1, tzinfo=timezone.utc).date()).days
+    cols = ['day','lat','lon','source','conf_level','conf_raw','frp','ftype']
+    rows = pd.DataFrame([
+        [day, -12., -69., 2, 2, -1, 100., 0],     # eligible
+        [day, -12.01, -69., 2, 2, -1, 1., 0],      # below threshold
+        [day, -13., -69., 2, 2, -1, 100., 0],      # outside radius
+        [day-3, -12.02, -69., 2, 2, -1, 100., 0],  # too old
+        [day+1, -12.03, -69., 2, 2, -1, 100., 0],  # future
+    ], columns=cols)
+    bbox = cfg.zone_bbox('peru')
+    groundtruth.save_geofence(cfg, 7, -12., -69., 10, chat_id=7)
+    groundtruth.set_language(cfg, 7, 'en')
+    nrt.save_recent(cfg, rows, nrt.NRT_SOURCES, 3, bbox=bbox)
+    class Telegram:
+        def __init__(self): self.fail = True; self.messages = []
+        def text(self, target, message, keyboard=None):
+            if self.fail: raise RuntimeError('send failed')
+            self.messages.append((message, keyboard))
+        def location(self, *args): pass
+    tg = Telegram()
+    assert bot.diagnose_live(cfg, ds, 'peru')['new'] == 1
+    with pytest.raises(RuntimeError): bot.check_alerts(cfg, tg, 'peru', ds)
+    assert not groundtruth.load_sent(cfg)
+    tg.fail = False
+    assert bot.check_alerts(cfg, tg, 'peru', ds) == 1
+    assert 'not a confirmed fire' in tg.messages[0][0].lower()
+    assert tg.messages[0][1]['inline_keyboard'][0][0]['text'] == '🔥 Real fire'
+    assert bot.check_alerts(cfg, tg, 'peru', ds) == 0
+    nrt.save_recent(cfg, rows, nrt.NRT_SOURCES, 3, bbox=[bbox[0]+1, bbox[1], bbox[2], bbox[3]])
+    assert bot.check_alerts(cfg, tg, 'peru', ds) == 0
+    assert not bot.diagnose_live(cfg, ds, 'peru')['fresh_and_covered']

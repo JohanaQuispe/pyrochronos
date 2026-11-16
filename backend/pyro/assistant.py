@@ -37,8 +37,10 @@ def _utc_day(value):
         return 'no disponible para esta zona'
 
 
-def answer_question(text: str, cfg: Config, ds: Dataset, bbox, zone_name: str, recent_selector=None) -> str:
+def answer_question(text: str, cfg: Config, ds: Dataset, bbox, zone_name: str, recent_selector=None, language: str = 'es') -> str:
     question = _normalize(text.strip())
+    if language == 'en':
+        return _answer_english(question, cfg, ds, bbox, zone_name, recent_selector)
     if any(word in question for word in ('viento', 'ruta', 'carretera', 'propagacion', 'vivienda', 'agua', 'hidrante')):
         return ('No tengo viento puntual, rutas ni cercanía a viviendas o agua. Consulta fuentes operativas '
                 'y verifica en campo; no puedo indicar una ruta segura ni cómo se propagará el fuego.')
@@ -48,7 +50,7 @@ def answer_question(text: str, cfg: Config, ds: Dataset, bbox, zone_name: str, r
             return f"{zone_name}: no hay historial suficiente para este cálculo. No es un pronóstico de incendios."
         return (f"{zone_name}: {alert.get('label', 'sin información')}. "
                 f"{alert.get('reasons', [''])[1] if len(alert.get('reasons', [])) > 1 else ''} "
-                "Es una referencia histórica, no indica focos activos ni predice incendios. "
+                "El indicador también incorpora detecciones recientes si están disponibles; no confirma incendios activos ni los predice. "
                 "Las cifras armonizadas están en revisión.")
     if any(word in question for word in ('foco', 'incendio', 'fuego', 'calor', 'punto', 'ocurriendo', 'pasando', 'actual', 'reciente', 'alerta', 'hay algo')):
         recent = nrt.stats(cfg, bbox, selector=recent_selector) if recent_selector else nrt.stats(cfg, bbox)
@@ -88,3 +90,60 @@ def answer_question(text: str, cfg: Config, ds: Dataset, bbox, zone_name: str, r
     return ('Puedo responder preguntas concretas sobre focos recientes, temporada histórica, satélites '
             'y cómo funcionan los avisos. No soy una IA de conversación ni puedo confirmar incendios. '
             'Prueba: ¿Hay focos recientes?')
+
+
+def _answer_english(question, cfg, ds, bbox, zone_name, recent_selector=None):
+    """Limited English templates; no claim to be a conversational AI."""
+    if any(word in question for word in ('wind', 'route', 'road', 'spread', 'house', 'water', 'hydrant')):
+        return ('I do not have local wind, routes, or distance to homes or water. Consult operational sources '
+                'and verify in the field; I cannot recommend a safe route or predict fire spread.')
+    if any(word in question for word in ('season', 'histor', 'calendar', 'temporada', 'historico', 'calendario')):
+        alert = build_alert(cfg, ds, bbox, zone_name, recent_selector=recent_selector)
+        if not alert.get('available', True):
+            return f'{zone_name}: there is not enough historical data. This is not a fire forecast.'
+        label = {'critico': 'Critical seasonal window', 'vigilancia': 'Seasonal watch', 'normal': 'Outside peak season'}.get(alert.get('level'), 'No information')
+        return (f"{zone_name}: {label}. The historical peak is in week {alert.get('peak_week', 'unknown')}. "
+                'The indicator also incorporates recent detections when available; it is not a forecast or confirmation of active fires. Harmonized results remain provisional.')
+    if any(word in question for word in ('telegram', 'bot', 'notif', 'avis', 'receive')):
+        return ('To receive Telegram alerts, share your location with the bot and choose a distance. '
+                'The bot must be running and FIRMS data must be updated. Alerts are sent only for nearby '
+                'detections above the thermal intensity threshold, not for every fire.')
+    if any(word in question for word in ('hotspot', 'fire', 'heat', 'recent', 'current', 'alert', 'foco', 'incendio', 'fuego', 'reciente', 'alerta')):
+        recent = nrt.stats(cfg, bbox, selector=recent_selector) if recent_selector else nrt.stats(cfg, bbox)
+        info = recent.get('meta') or {}
+        if not recent.get('available'):
+            return (f'{zone_name}: no recent data are loaded. This does not mean there are no hotspots. '
+                    'Check that the bot is running and can download NASA FIRMS data.')
+        try:
+            w, s, e, n = (float(x) for x in info['bbox'])
+            covered = w <= bbox[0] and s <= bbox[1] and e >= bbox[2] and n >= bbox[3]
+        except (KeyError, TypeError, ValueError, OverflowError):
+            covered = False
+        try:
+            stamp = datetime.fromisoformat(str(info.get('fetched_at')).replace('Z', '+00:00'))
+            if stamp.tzinfo is None:
+                raise ValueError('timezone missing')
+            local = stamp.astimezone(timezone(timedelta(hours=-5)))
+            downloaded = local.strftime('%d/%m/%Y %H:%M') + ' (Peru time)'
+        except (TypeError, ValueError, OverflowError):
+            downloaded = 'unknown'
+        _, fresh = _download_time(info.get('fetched_at'))
+        days = info.get('days')
+        period = f' in the requested last {days} days' if isinstance(days, int) and not isinstance(days, bool) and 1 <= days <= 10 else ''
+        lines = [f'📍 Area: {zone_name}',
+                 f"🛰️ The stored download contains {int(recent.get('total') or 0):,} heat detections in this area{period}.",
+                 f'📥 Downloaded: {downloaded}.',
+                 f"📅 Latest detection date in this area: {recent.get('last_day') or 'unavailable'} (UTC date)."]
+        if not covered:
+            lines.append('⚠️ Full coverage of this area has not been verified.')
+        if not fresh:
+            lines.append('⚠️ Data may be outdated; check the connection and refresh.')
+        if 'near' in question or 'cerca' in question:
+            lines.append('This summary covers the area; it does not calculate distance from your location.')
+        lines.append('A heat detection is not a confirmed fire and may no longer be active. Verify in the field and with official sources.')
+        return '\n'.join(lines)
+    if any(word in question for word in ('modis', 'viirs', 'satellite', 'data', 'sensor', 'datos', 'satelite')):
+        return (f'Historical data: {ds.start} to {ds.end}; {len(ds.df):,} MODIS and VIIRS detections. '
+                'These are heat detections, not confirmed fires. Harmonized results remain provisional.')
+    return ('I can answer specific questions about recent hotspots, historical seasons, satellites and alerts. '
+            'I am not a conversational AI and cannot confirm fires. Try: Are there recent hotspots?')

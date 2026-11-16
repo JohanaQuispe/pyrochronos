@@ -60,7 +60,9 @@ def test_api_filters_historic_recent_and_csv(monkeypatch, tmp_path):
         assert csv.status_code == 200 and csv.headers['x-total-rows'] == '1'
         calendar = client.get('/api/calendar', params={'zone': key})
         assert calendar.status_code == 200 and calendar.json()['cards']['total_detections'] == 1
-        assert calendar.json()['cards']['last_month']['level'] is None
+        # Solo hay VIIRS y no hay solape para calibrar: no inventar un valor armonizado.
+        assert 'last_month' not in calendar.json()['cards']
+        assert calendar.json()['calendar']['values'][0][9] is None
         question = client.post('/api/assistant', json={'question': 'hay focos recientes?', 'zone': key})
         assert question.status_code == 200 and '1 detecciones' in question.json()['answer']
     main._department_dataset.cache_clear()

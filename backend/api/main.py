@@ -366,7 +366,8 @@ def recent(zone: str | None = None, bbox: str | None = None):
 
 
 @app.get("/api/report")
-def report(zone: str | None = None, bbox: str | None = None, start: str | None = None, end: str | None = None):
+def report(zone: str | None = None, bbox: str | None = None, start: str | None = None, end: str | None = None,
+           language: Literal['es', 'en'] = 'es'):
     """Reporte ejecutivo imprimible (Guardar como PDF desde el navegador)."""
     ds = dataset()
     bb, name = resolve_zone(zone, bbox)
@@ -379,12 +380,12 @@ def report(zone: str | None = None, bbox: str | None = None, start: str | None =
     if s > e:
         raise HTTPException(400, "rango de fechas invalido")
     html = build_report_html(cfg, dataset_for_zone(zone, bbox), bb, name, s, e,
-                             recent_selector=department_selector(zone, bbox))
+                             recent_selector=department_selector(zone, bbox), language=language)
     return HTMLResponse(html)
 
 
 @app.get("/api/bulletin")
-def bulletin(zone: str | None = None, years_back: int = 3):
+def bulletin(zone: str | None = None, years_back: int = 3, language: Literal['es', 'en'] = 'es'):
     """Texto listo para pegar en un grupo de guardaparques (Telegram).
 
     El envio automatico vive en backend/scripts/notify_telegram.py y usa un token
@@ -394,8 +395,9 @@ def bulletin(zone: str | None = None, years_back: int = 3):
     key = zone or cfg.default_zone
     if key not in cfg.zones:
         raise HTTPException(404, f"zona desconocida: {key}")
-    text = build_bulletin(cfg, ds, key, years_back)
-    return {"zone": cfg.zone_name(key), "text": text, "note": "Historico, no es una alerta en tiempo real."}
+    text = build_bulletin(cfg, ds, key, years_back, language=language)
+    note = 'Historical, not a real-time alert.' if language == 'en' else 'Historico, no es una alerta en tiempo real.'
+    return {"zone": cfg.zone_name(key), "text": text, "note": note}
 
 
 # --- contexto meteorologico (NASA POWER, solo desde cache) -------------------
@@ -426,6 +428,7 @@ from pyro import assistant, geofence, groundtruth  # noqa: E402
 
 class AssistantQuestion(BaseModel):
     question: str = Field(min_length=1, max_length=500)
+    language: Literal['es', 'en'] = 'es'
     zone: str | None = None
     bbox: str | None = None
 
@@ -436,7 +439,8 @@ def ask_assistant(body: AssistantQuestion):
         raise HTTPException(400, "Escribe una pregunta")
     bb, name = resolve_zone(body.zone, body.bbox)
     return {"answer": assistant.answer_question(body.question, cfg, dataset_for_zone(body.zone, body.bbox), bb, name,
-                                                 recent_selector=department_selector(body.zone, body.bbox)),
+                                                 recent_selector=department_selector(body.zone, body.bbox),
+                                                 language=body.language),
             "type": "respuestas_acotadas"}
 
 

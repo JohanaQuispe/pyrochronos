@@ -146,6 +146,8 @@ def build_alert(
         "peak_week": peak_week,
         "peak_value": peak,
         "ratio": round(float(best_ratio), 3),
+        "best_week": best_week,
+        "recent_ratio": None if recent_ratio is None else round(float(recent_ratio), 3),
         "window": [
             {
                 "week": w,

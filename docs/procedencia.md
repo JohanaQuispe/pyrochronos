@@ -1,5 +1,8 @@
 # Procedencia de los datos
 
+> **Actualización del método:** se corrigió el uso del factor: los periodos con solo VIIRS ahora usan una calibración independiente unión/VIIRS; si no hay evidencia suficiente no se estima ese periodo. Las cifras y tablas anteriores se conservan como salida histórica, **no corresponden al método corregido**. Falta recalcular con el parquet local y validar VIIRS con `python backend/scripts/validacion_retrospectiva.py --sensor viirs`; las cifras y rankings siguen siendo provisionales. La presencia de detecciones no garantiza cobertura completa.
+
+
 ## Fuente original
 
 **NASA FIRMS** (Fire Information for Resource Management System), NASA EOSDIS.

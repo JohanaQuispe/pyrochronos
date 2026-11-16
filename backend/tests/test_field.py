@@ -141,3 +141,15 @@ def test_alert_text_for_actual_normalized_nrt_row():
     assert 'https://www.google.com/maps/search/?api=1&query=-12.5000,-69.2000' in text
     assert 'Hora de detección no disponible' in text
     assert 'no mide cercanía a viviendas' in text
+
+
+def test_english_alert_has_limits_and_english_actions():
+    row = {'day': 20000, 'source': 2, 'conf_level': 2, 'lat': -12.5, 'lon': -69.2,
+           'distance_km': 6.4, 'cardinal': 'SO', 'frp': 52, 'frp_p95': 43}
+    text = geofence.alert_text(row, zone='Perú', language='en')
+    assert '6.4 km SW' in text
+    assert '2024-10-04' in text and 'UTC' in text and 'confidence high' in text
+    assert 'not a confirmed fire' in text.lower() and 'official warning' in text
+    keyboard = geofence.inline_keyboard('abc', language='en')
+    assert keyboard['inline_keyboard'][0][0]['text'] == '🔥 Real fire'
+    assert geofence.parse_callback(keyboard['inline_keyboard'][0][0]['callback_data']) == ('abc', 'fuego_real')

@@ -1,5 +1,8 @@
 # Lista de entrega
 
+> **Actualización del método:** se corrigió el uso del factor: los periodos con solo VIIRS ahora usan una calibración independiente unión/VIIRS; si no hay evidencia suficiente no se estima ese periodo. Las cifras y tablas anteriores se conservan como salida histórica, **no corresponden al método corregido**. Falta recalcular con el parquet local y validar VIIRS con `python backend/scripts/validacion_retrospectiva.py --sensor viirs`; las cifras y rankings siguen siendo provisionales. La presencia de detecciones no garantiza cobertura completa.
+
+
 ## Datos usados
 
 La participante ejecutó `python backend\scripts\numeros_pitch.py` sobre su parquet local: **2 212 061
@@ -7,9 +10,8 @@ registros**, del **11-11-2000 al 01-11-2026**; 579 777 MODIS y 1 632 284 VIIRS. 
 en el repositorio es distinto; no sustituir los datos locales ni reconstruirlos desde archivos FIRMS.
 Las cifras calculadas y sus límites están en [`pitch.md`](pitch.md).
 
-**Pendiente prioritario:** revisar y corregir la estimación para periodos con VIIRS sin MODIS,
-volver a calcular con los datos locales y verificar resultados antes de citar totales armonizados o
-un ranking anual como definitivos. El año 2026 está incompleto.
+**Pendiente prioritario:** validar la corrección VIIRS y volver a calcular con los datos locales antes
+de citar totales armonizados o un ranking anual. El año 2026 está incompleto.
 
 ## Texto de propuesta (borrador; revisar antes de enviar)
 

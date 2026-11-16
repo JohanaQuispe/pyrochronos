@@ -194,9 +194,9 @@ function AppContent() {
     return {
       hotspots: `${BASE}/api/csv/hotspots?${qs(common)}`,
       series: `${BASE}/api/csv/series?${qs({ ...common, granularity: state?.granularity, measure: state?.measure })}`,
-      report: `${BASE}/api/report?${qs({ ...zoneParams, start: state?.start, end: state?.end })}`,
+      report: `${BASE}/api/report?${qs({ ...zoneParams, start: state?.start, end: state?.end, language: lang })}`,
     }
-  }, [state, zoneParams])
+  }, [state, zoneParams, lang])
 
   const onExportPng = () => {
     if (!data) return
@@ -267,7 +267,7 @@ function AppContent() {
           {loading ? t('Calculando el calendario…', 'Calculating calendar…') : data ? t('Calendario actualizado', 'Calendar updated') : t('Sin datos', 'No data')}
         </div>
 
-        {lang === 'en' && <p role="note" className="mb-4 rounded-xl border border-amber-400/30 bg-amber-400/10 px-4 py-3 text-[12px] text-amber-100">Some server-generated descriptions, the assistant, Telegram messages and exported reports remain in Spanish.</p>}
+        {lang === 'en' && <p role="note" className="mb-4 rounded-xl border border-amber-400/30 bg-amber-400/10 px-4 py-3 text-[12px] text-amber-100">Some server error details may remain in Spanish. To switch Telegram messages, send /language en to the bot.</p>}
         {error && (
           <div role="alert" className="mb-3 rounded-xl border border-red-500/30 bg-red-500/10 px-3 py-2 text-[13px] text-red-200">
             {error}
@@ -293,7 +293,7 @@ function AppContent() {
           {data && state && (
             <>
               <AlertStrip alert={alert} loading={alertLoading} dateRef={dateRef} setDateRef={setDateRef} zoneName={zoneName} />
-              {state.sources === 'both' && <div role="note" className="rounded-xl border border-amber-400/20 bg-amber-400/[0.05] px-4 py-3 text-[12px] leading-relaxed text-zinc-300"><strong className="text-amber-200">{t('Resultados armonizados provisionales.', 'Harmonized results are provisional.')}</strong> {t('Se está revisando el cálculo para periodos con VIIRS sin MODIS. No uses los totales o el ranking anual como definitivos.', 'The calculation for periods with VIIRS but no MODIS is under review. Do not treat totals or annual rankings as final.')}</div>}
+              {state.sources === 'both' && <div role="note" className="rounded-xl border border-amber-400/20 bg-amber-400/[0.05] px-4 py-3 text-[12px] leading-relaxed text-zinc-300"><strong className="text-amber-200">{t('Resultados armonizados provisionales.', 'Harmonized results are provisional.')}</strong> {t('La estimación usa factores separados para MODIS y VIIRS; falta validar VIIRS con tus datos y recalcular las cifras. No uses totales ni rankings como definitivos.', 'The estimate uses separate MODIS and VIIRS factors; VIIRS still needs validation with your data and figures must be recalculated. Do not treat totals or rankings as final.')}</div>}
               <div className="flex items-end justify-between pt-3"><div><p className="label">{t('Resumen de la zona', 'Area summary')}</p><h2 className="mt-1 text-[18px] font-semibold text-white">{t('La actividad en perspectiva', 'Activity in perspective')}</h2></div><span className="hidden text-[11px] text-zinc-500 sm:block">{t('PERIODO SELECCIONADO', 'SELECTED PERIOD')}</span></div>
               <SummaryCards data={data} />
 

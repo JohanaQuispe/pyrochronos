@@ -22,6 +22,13 @@ class Calibration:
     ratio_p25: dict[int, float] = field(default_factory=dict)
     ratio_p75: dict[int, float] = field(default_factory=dict)
     samples_by_period: dict[int, int] = field(default_factory=dict)
+    viirs_factor_by_period: dict[int, float] = field(default_factory=dict)
+    viirs_p25_by_period: dict[int, float] = field(default_factory=dict)
+    viirs_p75_by_period: dict[int, float] = field(default_factory=dict)
+    viirs_samples_by_period: dict[int, int] = field(default_factory=dict)
+    viirs_global_factor: float | None = None
+    viirs_global_p25: float | None = None
+    viirs_global_p75: float | None = None
     global_factor: float = 1.0
     global_p25: float = 1.0
     global_p75: float = 1.0
@@ -41,12 +48,24 @@ class Calibration:
             )
         return self.global_factor, self.global_p25, self.global_p75, True
 
+    def factor_viirs(self, period_index: int) -> tuple[float | None, float | None, float | None, bool]:
+        """Factor unión/VIIRS, independiente del factor unión/MODIS."""
+        if period_index in self.viirs_factor_by_period:
+            return (self.viirs_factor_by_period[period_index], self.viirs_p25_by_period[period_index],
+                    self.viirs_p75_by_period[period_index], False)
+        return self.viirs_global_factor, self.viirs_global_p25, self.viirs_global_p75, True
+
     def as_dict(self) -> dict:
         return {
             "measure": self.measure,
             "global_factor": round(float(self.global_factor), 3),
             "global_p25": round(float(self.global_p25), 3),
             "global_p75": round(float(self.global_p75), 3),
+            "viirs_global_factor": None if self.viirs_global_factor is None else round(self.viirs_global_factor, 3),
+            "viirs_global_p25": None if self.viirs_global_p25 is None else round(self.viirs_global_p25, 3),
+            "viirs_global_p75": None if self.viirs_global_p75 is None else round(self.viirs_global_p75, 3),
+            "viirs_factor_by_period": {str(k): round(v, 3) for k, v in sorted(self.viirs_factor_by_period.items())},
+            "viirs_samples_by_period": {str(k): int(v) for k, v in sorted(self.viirs_samples_by_period.items())},
             "agreement_r": None if self.agreement_r is None else round(float(self.agreement_r), 3),
             "agreement_n": int(self.agreement_n),
             "overlap_years": self.overlap_years,
@@ -97,6 +116,23 @@ def calibrate(
             cal.ratio_p75[int(pid)] = float(np.percentile(vals, 75))
             cal.samples_by_period[int(pid)] = int(vals.size)
 
+    # VIIRS sola requiere su propio cociente unión/VIIRS; nunca usar unión/MODIS.
+    viirs_ratio = np.divide(u, v, out=np.full_like(u, np.nan), where=v > 0)
+    viirs_usable = overlap & (v >= min_periods_for_factor) & np.isfinite(viirs_ratio)
+    if viirs_usable.sum() >= 3:
+        samples = viirs_ratio[viirs_usable]
+        cal.viirs_global_factor = float(np.median(samples))
+        cal.viirs_global_p25 = float(np.percentile(samples, 25))
+        cal.viirs_global_p75 = float(np.percentile(samples, 75))
+    for pid in agg['period_index'].unique():
+        sel = viirs_usable & (agg['period_index'].to_numpy() == pid)
+        samples = viirs_ratio[sel]
+        if len(samples) >= shrink_min_years:
+            cal.viirs_factor_by_period[int(pid)] = float(np.median(samples))
+            cal.viirs_p25_by_period[int(pid)] = float(np.percentile(samples, 25))
+            cal.viirs_p75_by_period[int(pid)] = float(np.percentile(samples, 75))
+            cal.viirs_samples_by_period[int(pid)] = int(len(samples))
+
     # concordancia: correlacion de las dos fuentes en el solape
     if both.sum() >= 3 and np.std(m[both]) > 0 and np.std(v[both]) > 0:
         cal.agreement_r = float(np.corrcoef(m[both], v[both])[0, 1])
@@ -105,7 +141,7 @@ def calibrate(
     return cal
 
 
-def harmonize(agg: pd.DataFrame, cal: Calibration) -> pd.DataFrame:
+def harmonize(agg: pd.DataFrame, cal: Calibration, sources: str = 'both') -> pd.DataFrame:
     """Devuelve la serie armonizada con bandera de estimacion y banda de incertidumbre."""
     p = PREFIX[cal.measure]
     m = agg[f"modis_{p}"].to_numpy(float)
@@ -121,22 +157,23 @@ def harmonize(agg: pd.DataFrame, cal: Calibration) -> pd.DataFrame:
     factor_used = np.full(len(agg), np.nan)
 
     for i, pid in enumerate(agg["period_index"].to_numpy()):
-        f, lo, hi, is_global = cal.factor(pid)
-        factor_used[i] = f
-        if m[i] > 0 and v[i] > 0:            # ambos sensores: observado
-            value[i] = u[i]
-            low[i] = high[i] = u[i]
-            estimated[i] = False
-        elif m[i] > 0:                        # solo MODIS: estimado
+        if sources != 'both':                 # vista de un sensor: datos observados
+            value[i] = low[i] = high[i] = u[i]
+        elif m[i] > 0 and v[i] > 0:            # ambos sensores: unión observada
+            value[i] = low[i] = high[i] = u[i]
+        elif m[i] > 0:
+            f, lo, hi, is_global = cal.factor(pid)
+            factor_used[i] = f
             value[i] = m[i] * f
             low[i], high[i] = m[i] * lo, m[i] * hi
-            estimated[i] = True
-            fallback[i] = is_global
-        elif v[i] > 0:                        # solo VIIRS (sin MODIS): estimado
-            value[i] = v[i] * f
-            low[i], high[i] = v[i] * lo, v[i] * hi
-            estimated[i] = True
-            fallback[i] = is_global
+            estimated[i], fallback[i] = True, is_global
+        elif v[i] > 0:
+            f, lo, hi, is_global = cal.factor_viirs(pid)
+            if f is not None:                  # sin evidencia: valor no disponible, no cero
+                factor_used[i] = f
+                value[i] = v[i] * f
+                low[i], high[i] = v[i] * lo, v[i] * hi
+                estimated[i], fallback[i] = True, is_global
 
     out["value"] = value
     out["value_low"] = low

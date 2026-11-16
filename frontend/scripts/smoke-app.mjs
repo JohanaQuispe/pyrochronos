@@ -38,7 +38,9 @@ const hotspots = { type: 'FeatureCollection', features: [{ type: 'Feature', geom
 
 let calls = 0
 const urls = []
-global.fetch = async (url) => {
+const requests = []
+global.fetch = async (url, options = {}) => {
+  requests.push({ url: String(url), ...options })
   calls += 1
   urls.push(String(url))
   const body = url.includes('/api/meta') ? meta
@@ -134,7 +136,12 @@ language.dispatchEvent(new dom.window.Event('change', { bubbles: true }))
 await new Promise((r) => setTimeout(r, 150))
 checks.push(['interfaz en inglés', root.textContent.includes('Monitoring') && root.textContent.includes('Activity calendar') && root.textContent.includes('Explore detections') && root.textContent.includes('Field status')])
 checks.push(['idioma y selección conservados', document.documentElement.lang === 'en' && localStorage.getItem('pyrochronos-language') === 'en' && root.querySelector('#zone-select').value === 'd_15'])
-checks.push(['límites de traducción indicados', root.textContent.includes('server-generated descriptions') && root.textContent.includes('replies in Spanish')])
+checks.push(['idioma de Telegram explicado', root.textContent.includes('send /language en to the bot')])
+const englishQuestion = [...root.querySelectorAll('button')].find((button) => button.textContent === 'Are there recent hotspots?')
+englishQuestion.click()
+await new Promise((r) => setTimeout(r, 100))
+checks.push(['asistente solicita inglés', requests.some((r) => r.url.includes('/api/assistant') && r.body && JSON.parse(r.body).language === 'en')])
+checks.push(['reporte solicita inglés', root.querySelector('a[href*="/api/report"]').href.includes('language=en')])
 root.querySelector('#tab-calendario').click()
 await new Promise((r) => setTimeout(r, 100))
 checks.push(['advertencia provisional en inglés', root.textContent.includes('Harmonized results are provisional.')])
