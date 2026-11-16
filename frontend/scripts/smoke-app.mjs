@@ -98,6 +98,8 @@ const checks = [
   ['histórico separado', html.includes('Última fecha del archivo histórico') && html.includes('Los datos recientes se muestran por separado')],
   ['guía y límites visibles', html.includes('Cómo usar el mapa') && html.includes('Un punto de calor no confirma un incendio')],
   ['calendario montado', html.includes('Calendario de actividad')],
+  ['guía sencilla de calendario', html.includes('Cada fila es un año y cada columna un mes.') && html.includes('Toca un cuadro para ver el detalle.')],
+  ['nota breve y explicación', html.includes('Cifras estimadas y ranking provisionales.') && html.includes('¿Por qué?')],
   ['mapa montado', html.includes('leaflet-container')],
   ['filtros', html.includes('Filtros')],
   ['descargas', html.includes('CSV de focos') || html.includes('Reporte ejecutivo')],
@@ -155,7 +157,7 @@ checks.push(['asistente solicita inglés', requests.some((r) => r.url.includes('
 checks.push(['reporte solicita inglés', root.querySelector('a[href*="/api/report"]').href.includes('language=en')])
 root.querySelector('#tab-calendario').click()
 await new Promise((r) => setTimeout(r, 100))
-checks.push(['advertencia provisional en inglés', root.textContent.includes('Harmonized results are provisional.')])
+checks.push(['advertencia provisional en inglés', root.textContent.includes('Estimated figures and rankings are provisional.') && root.textContent.includes('Why?')])
 const filterButton = [...root.querySelectorAll('button')].find((button) => button.textContent.includes('Filters'))
 filterButton.click()
 await new Promise((r) => setTimeout(r, 100))

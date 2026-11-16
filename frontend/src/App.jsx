@@ -293,16 +293,18 @@ function AppContent() {
         >
           {data && state && (
             <>
-              <AlertStrip alert={alert} loading={alertLoading} dateRef={dateRef} setDateRef={setDateRef} zoneName={zoneName} />
-              {state.sources === 'both' && <div role="note" className="rounded-xl border border-amber-400/20 bg-amber-400/[0.05] px-4 py-3 text-[12px] leading-relaxed text-zinc-300"><strong className="text-amber-200">{t('Resultados armonizados provisionales.', 'Harmonized results are provisional.')}</strong> {t('La estimación usa factores separados para MODIS y VIIRS; falta validar VIIRS con tus datos y recalcular las cifras. No uses totales ni rankings como definitivos.', 'The estimate uses separate MODIS and VIIRS factors; VIIRS still needs validation with your data and figures must be recalculated. Do not treat totals or rankings as final.')}</div>}
-              <div className="flex items-end justify-between pt-3"><div><p className="label">{t('Resumen de la zona', 'Area summary')}</p><h2 className="mt-1 text-[18px] font-semibold text-white">{t('La actividad en perspectiva', 'Activity in perspective')}</h2></div><span className="hidden text-[11px] text-zinc-500 sm:block">{t('PERIODO SELECCIONADO', 'SELECTED PERIOD')}</span></div>
-              <SummaryCards data={data} />
-
+              {state.sources === 'both' && <div role="note" className="rounded-xl border border-amber-400/20 bg-amber-400/[0.05] px-4 py-3 text-[12px] leading-relaxed text-zinc-300">
+                <strong className="text-amber-200">{t('Cifras estimadas y ranking provisionales.', 'Estimated figures and rankings are provisional.')}</strong>
+                <details className="mt-1"><summary className="cursor-pointer">{t('¿Por qué?', 'Why?')}</summary><p className="mt-1">{t('Se usan factores distintos para MODIS y VIIRS. Aún falta validar VIIRS y recalcular las cifras con tus datos.', 'Separate factors are used for MODIS and VIIRS. VIIRS still needs validation and figures must be recalculated with your data.')}</p></details>
+              </div>}
               <CalendarHeatmap
                 data={data}
                 palette={state.palette}
                 onPickYear={(year) => setState((s) => ({ ...s, year }))}
               />
+              <div className="flex items-end justify-between pt-3"><div><p className="label">{t('Resumen de la zona', 'Area summary')}</p><h2 className="mt-1 text-[18px] font-semibold text-white">{t('La actividad en perspectiva', 'Activity in perspective')}</h2></div><span className="hidden text-[11px] text-zinc-500 sm:block">{t('PERIODO SELECCIONADO', 'SELECTED PERIOD')}</span></div>
+              <SummaryCards data={data} />
+              <AlertStrip alert={alert} loading={alertLoading} dateRef={dateRef} setDateRef={setDateRef} zoneName={zoneName} />
 
               <div className="grid gap-3 lg:grid-cols-[1.55fr_1fr]">
                 <AnomalyChart data={data} years={years} onYearChange={(year) => setState((s) => ({ ...s, year }))} />
@@ -312,10 +314,10 @@ function AppContent() {
                       {t('Cómo leerlo en 30 segundos', 'How to read this in 30 seconds')}
                     </h2>
                     <ol className="mt-2 space-y-1.5 text-[12px] leading-relaxed text-zinc-400">
-                      <li>{t('1 · La columna más intensa es la temporada de fuego de la zona.', '1 · The most intense column shows the area’s fire season.')}</li>
-                      <li>{t('2 · Cada fila es un año; compara filas para encontrar años anómalos.', '2 · Each row is a year; compare rows for unusual years.')}</li>
-                      <li>{t('3 · ▲ y ◆ marcan periodos sobre lo normal; la trama rayada indica valores estimados.', '3 · ▲ and ◆ mark above-normal periods; hatching indicates estimates.')}</li>
-                      <li>{t('4 · El semáforo dice en qué punto de esa temporada estamos hoy.', '4 · The seasonal indicator shows where today falls in that season.')}</li>
+                      <li>{t('1 · Cada fila es un año y cada columna un mes o una semana.', '1 · Each row is a year and each column a month or week.')}</li>
+                      <li>{t('2 · Los colores más intensos indican valores mayores para la medida elegida.', '2 · Stronger colors indicate higher values for the selected measure.')}</li>
+                      <li>{t('3 · ▲ y ◆ comparan cada periodo con su historial; las rayas indican estimaciones.', '3 · ▲ and ◆ compare each period with its history; hatching indicates estimates.')}</li>
+                      <li>{t('4 · El indicador estacional usa el historial y, cuando hay, datos recientes; no predice incendios.', '4 · The seasonal indicator uses history and, when available, recent data; it does not predict fires.')}</li>
                     </ol>
                   </section>
                 </div>
