@@ -27,7 +27,7 @@ export default function CalendarHeatmap({ data, onPickYear, palette = 'fuego' })
       const year = cal.years[yi]
       const p = periods[xi]
       const label = isWeek ? `${t('semana', 'week')} ${p}` : monthName(MONTHS[p - 1], lang)
-      if (value === null) return `${label} ${year}: ${t('sin dato (fuera de la cobertura de los satélites)', 'no data (outside satellite coverage)')}`
+      if (value === null) return `${label} ${year}: ${t('sin dato o sin estimación disponible', 'no data or estimate available')}`
       const parts = [`${label} ${year}: ${fmt(value)} ${measureLabel}`]
       if (cal.estimated[yi][xi]) parts.push(t('valor estimado; sujeto a revisión', 'estimated value; under review'))
       if (cal.levels[yi][xi]) {
@@ -72,9 +72,11 @@ export default function CalendarHeatmap({ data, onPickYear, palette = 'fuego' })
           <h2 id="cal-title" className="text-sm font-semibold text-white">
             {t('Calendario de actividad', 'Activity calendar')}
           </h2>
-          <p className="text-[11px] text-mist">
-            {t('Filas: años · Columnas:', 'Rows: years · Columns:')} {isWeek ? t('semanas del año (1–53)', 'weeks of the year (1–53)') : t('meses', 'months')} · {t('Color:', 'Color:')} {measureLabel}
-            {meta.sources === 'both' ? t(' armonizadas', ' harmonized') : ` (${t('solo', 'only')} ${meta.sources === 'modis' ? 'MODIS' : 'VIIRS'})`}
+          <p className="mt-1 text-[12px] leading-relaxed text-zinc-300">
+            {isWeek ? t('Cada fila es un año y cada columna una semana.', 'Each row is a year and each column a week.') : t('Cada fila es un año y cada columna un mes.', 'Each row is a year and each column a month.')} {t('El color más intenso indica un valor mayor. Toca un cuadro para ver el detalle.', 'A stronger color indicates a higher value. Select a square for details.')}
+          </p>
+          <p className="mt-1 text-[11px] text-mist">
+            {t('Medida:', 'Measure:')} {measureLabel}{meta.sources === 'both' ? t(' armonizadas', ' harmonized') : ` (${t('solo', 'only')} ${meta.sources === 'modis' ? 'MODIS' : 'VIIRS'})`} · {t('Histórico, no muestra incendios activos.', 'Historical data; does not show active fires.')}
           </p>
         </div>
         <ul className="flex flex-wrap items-center gap-3 text-[11px] text-mist">
