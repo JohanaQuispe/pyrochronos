@@ -186,8 +186,8 @@ export default function MapPanel({ bbox, zone, hotspots, meta, onBBoxChange, loa
     >
       <div className="flex items-center justify-between gap-2 px-4 py-3">
         <div>
-          <h2 id="map-title" className="text-[16px] font-semibold text-white">{t('Explorar detecciones', 'Explore detections')}</h2>
-          <p className="hint">{t('Toca un punto para ver sus datos y coordenadas', 'Select a point to see its details and coordinates')}</p>
+          <h2 id="map-title" className="text-[16px] font-semibold text-white">{t('Mapa de detecciones de calor', 'Heat detection map')}</h2>
+          <p className="hint">{t('Toca un punto para ver su fecha y ubicación.', 'Select a point to see its date and location.')}</p>
         </div>
         <button
           type="button"
@@ -200,12 +200,10 @@ export default function MapPanel({ bbox, zone, hotspots, meta, onBBoxChange, loa
       </div>
 
       <div className="flex flex-wrap items-center gap-2 px-4 pb-2 text-[11px]">
-        <label className="text-zinc-400">{t('Capa', 'Layer')}{' '}
-          <select className="input" aria-label={t('Capa del mapa', 'Map layer')} value={layer} onChange={(e) => onLayerChange(e.target.value)}>
-            <option value="history">{t('Historial seleccionado', 'Selected history')}</option>
-            <option value="recent">{t('Datos NRT cargados', 'Loaded NRT data')}</option>
-          </select>
-        </label>
+        <div role="group" aria-label={t('Datos del mapa', 'Map data')} className="flex flex-wrap gap-1">
+          <button type="button" aria-pressed={layer === 'recent'} className={`seg ${layer === 'recent' ? 'seg-on' : ''}`} onClick={() => onLayerChange('recent')}>{t('Datos recientes', 'Recent data')}</button>
+          <button type="button" aria-pressed={layer === 'history'} className={`seg ${layer === 'history' ? 'seg-on' : ''}`} onClick={() => onLayerChange('history')}>{t('Datos históricos', 'Historical data')}</button>
+        </div>
         <label className="text-zinc-400">Sensor{' '}
           <select className="input" aria-label={t('Sensor del mapa', 'Map sensor')} value={source} onChange={(e) => onSourceChange(e.target.value)}>
             <option value="both">{t('MODIS y VIIRS', 'MODIS and VIIRS')}</option>
@@ -219,15 +217,17 @@ export default function MapPanel({ bbox, zone, hotspots, meta, onBBoxChange, loa
         </label>
       </div>
       <p className="px-4 pb-2 text-[10.5px] leading-snug text-zinc-400" role="status">
-        {mapError ? `${t('No se pudo cargar la capa', 'Could not load layer')}: ${mapError}`
-          : layer === 'history' ? t('Historial del periodo elegido; no indica focos activos ahora.', 'Historical data for the selected period; it does not show current active fires.')
-            : !hotspots ? t('Consultando datos NRT guardados; no es una consulta en vivo.', 'Loading stored NRT data; this is not a live query.')
-              : !hotspots.meta.available ? t('Sin datos NRT cargados. No significa que no haya focos.', 'No NRT data loaded. This does not mean there are no hotspots.')
-                : `${t('NRT guardado · última descarga', 'Stored NRT · last download')}: ${hotspots.meta.fetched_at || t('desconocida', 'unknown')} · ${t('última detección', 'last detection')}: ${hotspots.meta.last_day || t('desconocida', 'unknown')}. ${fullCoverage ? '' : t('Cobertura completa de la zona no verificada. ', 'Full area coverage not verified. ')}${t('Puede estar desactualizado; no es tiempo real.', 'May be outdated; not real time.')}`}
+        {mapError ? `${t('No se pudo cargar el mapa', 'Could not load the map')}: ${mapError}`
+          : layer === 'history' ? t('Historial del periodo elegido: no muestra incendios activos ahora.', 'History for the selected period: it does not show active fires now.')
+            : !hotspots ? t('Consultando datos recientes guardados…', 'Loading saved recent data…')
+              : !hotspots.meta.available ? t('No hay datos recientes cargados. Esto no significa que no haya focos. Comprueba que el bot esté actualizando FIRMS.', 'No recent data loaded. This does not mean there are no hotspots. Check that the bot is refreshing FIRMS.')
+                : `${t('Última descarga (UTC)', 'Last download (UTC)')}: ${hotspots.meta.fetched_at || t('desconocida', 'unknown')} · ${t('última detección del archivo completo (fecha UTC)', 'latest detection in the full file (UTC date)')}: ${hotspots.meta.last_day || t('desconocida', 'unknown')}. ${fullCoverage ? '' : t('No se ha verificado la cobertura completa de esta zona. ', 'Full area coverage has not been verified. ')}${t('Datos guardados; pueden tener retraso y no confirman incendios.', 'Saved data may be delayed and do not confirm fires.')}`}
       </p>
 
       {zone?.startsWith('d_') && <p className="px-4 pb-2 text-[10.5px] text-zinc-400">{boundaryError ? t('No se pudo cargar el contorno.', 'Could not load the boundary.') : t('Contorno departamental simplificado (INEI 2007); puede diferir del límite oficial actual.', 'Simplified department boundary (INEI 2007); it may differ from the current official boundary.')}</p>}
-      <div className="flex items-end gap-1.5 px-4 pb-3">
+      <details className="px-4 pb-2 text-[11px] text-zinc-400">
+        <summary className="cursor-pointer">{t('Definir zona por coordenadas (opcional)', 'Set area by coordinates (optional)')}</summary>
+        <div className="mt-2 flex items-end gap-1.5">
         {[['w', t('O', 'W')], ['s', 'S'], ['e', 'E'], ['n', 'N']].map(([key, text]) => (
           <label key={key} className="flex-1 text-[9.5px] text-mist">
             <span className="sr-only">
@@ -247,7 +247,8 @@ export default function MapPanel({ bbox, zone, hotspots, meta, onBBoxChange, loa
         <button type="button" className="btn shrink-0 px-2 py-1 text-[10.5px]" onClick={applyCoords} title={t('Aplicar coordenadas', 'Apply coordinates')}>
           {t('Aplicar', 'Apply')}
         </button>
-      </div>
+        </div>
+      </details>
 
       <div className="relative flex-1">
         <div ref={mapEl} className="absolute inset-0" role="application" aria-label={t('Mapa con los focos de calor del periodo', 'Map of heat detections in the period')} />
@@ -266,9 +267,9 @@ export default function MapPanel({ bbox, zone, hotspots, meta, onBBoxChange, loa
           <span className="inline-block h-2 w-2 rounded-full bg-[#ffd166]" aria-hidden="true" /> VIIRS
         </span>
         <span>
-          {hotspots
-            ? `${fmt(hotspots.meta.shown)} ${t('de', 'of')} ${fmt(hotspots.meta.total)} ${t('focos', 'hotspots')}${hotspots.meta.sampled ? t(' (muestra)', ' (sample)') : ''}`
-            : t('Sin focos', 'No hotspots')}
+          {hotspots && hotspots.meta.available !== false
+            ? `${fmt(hotspots.meta.shown)} ${t('de', 'of')} ${fmt(hotspots.meta.total)} ${t('detecciones', 'detections')}${hotspots.meta.sampled ? t(' (muestra)', ' (sample)') : ''}`
+            : t('Datos no disponibles', 'Data unavailable')}
         </span>
         <span className="ml-auto">{t('Colores = sensor, no prioridad', 'Colors = sensor, not priority')}{meta?.cell_deg ? ` · ${meta.cell_deg}° ${t('por celda', 'per cell')}` : ''}</span>
       </div>

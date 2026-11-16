@@ -53,7 +53,7 @@ export default function TopBar({ meta, state, setState, onShortcut, downloads, o
             <optgroup label={t('Departamentos · límites simplificados', 'Departments · simplified boundaries')}>{zones.filter((z) => z.kind === 'department').map((z) => <option key={z.key} value={z.key}>{z.name}</option>)}</optgroup>
             {state.zone === 'custom' && <option value="custom">{t('Zona dibujada', 'Drawn area')}</option>}
           </select>
-          <label className="sr-only" htmlFor="range-select">{t('Rango de fechas', 'Date range')}</label>
+          <label className="text-[11px] text-zinc-400" htmlFor="range-select">{t('Fechas del historial', 'Historical dates')}</label>
           <select id="range-select" className="input" value={range} onChange={(e) => {
             if (e.target.value === 'custom') setShowDates(true)
             else { setShowDates(false); onShortcut(e.target.value) }
@@ -67,7 +67,7 @@ export default function TopBar({ meta, state, setState, onShortcut, downloads, o
             <span className="text-zinc-500">—</span>
             <input type="date" className="input" aria-label={t('Fecha final', 'End date')} min={coverage.start} max={coverage.end} value={state.end} onChange={(e) => setState((s) => ({ ...s, end: e.target.value }))} />
           </div>}
-          <span className="ml-auto hidden text-[11px] tabular-nums text-zinc-500 xl:block">{t('Cobertura cargada:', 'Loaded coverage:')} {coverage.start} — {coverage.end}</span>
+          <span className="ml-auto hidden text-[11px] tabular-nums text-zinc-500 xl:block">{t('Archivo histórico:', 'Historical file:')} {coverage.start} — {coverage.end}</span>
         </div>
       </div>
     </header>

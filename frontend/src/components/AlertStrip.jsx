@@ -27,7 +27,7 @@ export default function AlertStrip({ alert, loading, dateRef, setDateRef, zoneNa
         </div>
         <div className="border-white/[0.08] lg:border-l lg:pl-5">
           <p className="text-[12px] leading-relaxed text-zinc-300">{loading ? t('Consultando el historial de la zona.', 'Loading the area’s history.') : lang === 'en' ? englishDetail : alert?.reasons?.[2] || alert?.reasons?.[1] || 'No se pudo obtener el análisis estacional.'}</p>
-          <p className="mt-1 text-[11px] text-zinc-500">{t('Basado en el historial; no indica incendios activos ni es un pronóstico.', 'Based on historical data and, when available, recent detections; not a forecast or confirmation of active fires.')}</p>
+          <p className="mt-1 text-[11px] text-zinc-500">{t('Basado en el historial y, si están disponibles, datos recientes. No confirma incendios activos ni es un pronóstico.', 'Based on historical data and, when available, recent detections; not a forecast or confirmation of active fires.')}</p>
           {recent.available && !recent.empty && <p className="mt-1 text-[11px] text-zinc-400">{fmt(recent.total)} {t('focos en datos NRT cargados; verifica la fecha en el mapa.', 'hotspots in loaded NRT data; check the date on the map.')}</p>}
         </div>
         <button type="button" className="btn justify-center" onClick={() => setOpen((o) => !o)} aria-expanded={open}>{open ? t('Ocultar detalle', 'Hide details') : t('Ver detalle', 'View details')} <span aria-hidden="true">{open ? '↑' : '↗'}</span></button>
