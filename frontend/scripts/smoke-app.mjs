@@ -37,6 +37,7 @@ const meta = {
 const hotspots = { type: 'FeatureCollection', features: [{ type: 'Feature', geometry: { type: 'Point', coordinates: [-69.1, -12.5] }, properties: { day: '2024-09-01', source: 'VIIRS', conf: 1, frp: 3.2 } }], meta: { total: 1, shown: 1, sampled: false } }
 
 let calls = 0
+let recentAvailable = false
 const urls = []
 const requests = []
 global.fetch = async (url, options = {}) => {
@@ -46,7 +47,7 @@ global.fetch = async (url, options = {}) => {
   const body = url.includes('/api/meta') ? meta
     : url.includes('/api/assistant') ? { answer: 'No hay datos recientes cargados; verifica en campo.' }
     : url.includes('/api/departments/') ? { type: 'Feature', geometry: { type: 'Polygon', coordinates: [[[-77,-12],[-76,-12],[-76,-11],[-77,-12]]] }, properties: { name: 'Lima' } }
-    : url.includes('/api/recent/hotspots') ? { type: 'FeatureCollection', features: [], meta: { available: false, total: 0, shown: 0, sampled: false } }
+    : url.includes('/api/recent/hotspots') ? { type: 'FeatureCollection', features: [], meta: { available: recentAvailable, total: 0, shown: 0, sampled: false, fetched_at: recentAvailable ? '2026-11-16T01:04:07+00:00' : null, last_day: recentAvailable ? '2026-11-15' : null, bbox: [-81.5, -18.5, -68.5, 0.5] } }
     : url.includes('/api/recent?') ? { available: false, reason: 'Sin datos NRT cargados.', meta: {} }
       : url.includes('/api/geofences') ? { count: 0, items: [] }
         : url.includes('/api/groundtruth') ? { summary: { total: 0, counts: { fuego_real: 0, quema_agricola: 0, falsa_alarma: 0 } }, items: [] }
@@ -91,16 +92,19 @@ await new Promise((r) => setTimeout(r, 1500))
 const html = dom.window.document.getElementById('root').innerHTML
 const checks = [
   ['cabecera', html.includes('PyroChronos')],
-  ['pestanas', html.includes('Monitoreo') && html.includes('Histórico') && html.includes('Campo y Telegram')],
-  ['vista de campo', html.includes('Estado de campo') || html.includes('Datos recientes')],
+  ['pestanas', html.includes('Mapa') && html.includes('Historial') && html.includes('Telegram y estado')],
+  ['vista de campo', html.includes('Telegram y datos recientes')],
+  ['destinatarios claros', html.includes('Información satelital para bomberos y brigadas')],
+  ['histórico separado', html.includes('Última fecha del archivo histórico') && html.includes('Los datos recientes se muestran por separado')],
+  ['guía y límites visibles', html.includes('Cómo usar el mapa') && html.includes('Un punto de calor no confirma un incendio')],
   ['calendario montado', html.includes('Calendario de actividad')],
   ['mapa montado', html.includes('leaflet-container')],
   ['filtros', html.includes('Filtros')],
   ['descargas', html.includes('CSV de focos') || html.includes('Reporte ejecutivo')],
   ['semaforo', html.includes('Ventana cr')],
   ['fetch llamado', calls >= 7],
-  ['estado NRT explicado', html.includes('Sin datos NRT cargados')],
-  ['geocercas consultadas', html.includes('Geocercas registradas')],
+  ['datos recientes explicados', html.includes('No hay datos recientes cargados')],
+  ['ubicaciones consultadas', html.includes('Ubicaciones para recibir avisos')],
   ['veredictos consultados', html.includes('Veredictos registrados')],
   ['logo visible', Boolean(dom.window.document.querySelector('header img[src="/logo.png"]'))],
   ['sin NASA POWER en la interfaz', !html.includes('NASA POWER') && !urls.some((url) => url.includes('/api/climate-context'))],
@@ -111,11 +115,17 @@ const root = dom.window.document.getElementById('root')
 root.querySelector('#tab-mapa').click()
 await new Promise((r) => setTimeout(r, 100))
 checks.push(['pestaña mapa activa', !root.querySelector('#panel-mapa').hidden && root.querySelector('#panel-calendario').hidden])
-const layer = root.querySelector('[aria-label="Capa del mapa"]')
-layer.value = 'recent'
-layer.dispatchEvent(new dom.window.Event('change', { bubbles: true }))
+const mapData = root.querySelector('[aria-label="Datos del mapa"]')
+const [recentButton, historyButton] = mapData.querySelectorAll('button')
+checks.push(['mapa reciente por defecto', recentButton.getAttribute('aria-pressed') === 'true' && urls.some((url) => url.includes('/api/recent/hotspots'))])
+checks.push(['datos ausentes no significan ausencia de focos', root.querySelector('#panel-mapa').textContent.includes('Esto no significa que no haya focos')])
+historyButton.click()
 await new Promise((r) => setTimeout(r, 100))
-checks.push(['NRT ausente explicado', root.textContent.includes('Sin datos NRT cargados')])
+checks.push(['cambio a historial', historyButton.getAttribute('aria-pressed') === 'true' && urls.some((url) => url.includes('/api/hotspots')) && root.querySelector('#panel-mapa').textContent.includes('no muestra incendios activos ahora')])
+recentAvailable = true
+recentButton.click()
+await new Promise((r) => setTimeout(r, 100))
+checks.push(['fecha de archivo reciente', recentButton.getAttribute('aria-pressed') === 'true' && root.querySelector('#panel-mapa').textContent.includes('2026-11-16T01:04:07+00:00') && root.querySelector('#panel-mapa').textContent.includes('última detección del archivo completo')])
 const sensor = root.querySelector('[aria-label="Sensor del mapa"]')
 sensor.value = 'viirs'
 sensor.dispatchEvent(new dom.window.Event('change', { bubbles: true }))
@@ -134,7 +144,8 @@ const language = root.querySelector('[aria-label="Idioma / Language"]')
 language.value = 'en'
 language.dispatchEvent(new dom.window.Event('change', { bubbles: true }))
 await new Promise((r) => setTimeout(r, 150))
-checks.push(['interfaz en inglés', root.textContent.includes('Monitoring') && root.textContent.includes('Activity calendar') && root.textContent.includes('Explore detections') && root.textContent.includes('Field status')])
+checks.push(['interfaz en inglés', root.textContent.includes('Satellite information for firefighters') && root.textContent.includes('Activity calendar') && root.textContent.includes('Heat detection map') && root.textContent.includes('Telegram and recent data')])
+checks.push(['mapa reciente también en inglés', root.textContent.includes('Recent data') && root.textContent.includes('Historical data') && root.textContent.includes('Last download (UTC)')])
 checks.push(['idioma y selección conservados', document.documentElement.lang === 'en' && localStorage.getItem('pyrochronos-language') === 'en' && root.querySelector('#zone-select').value === 'd_15'])
 checks.push(['idioma de Telegram explicado', root.textContent.includes('send /language en to the bot')])
 const englishQuestion = [...root.querySelectorAll('button')].find((button) => button.textContent === 'Are there recent hotspots?')

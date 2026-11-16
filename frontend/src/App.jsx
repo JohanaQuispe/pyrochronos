@@ -25,9 +25,9 @@ export default function App() {
 function AppContent() {
   const { lang, t } = useLanguage()
   const TABS = [
-    { key: 'mapa', label: t('Monitoreo', 'Monitoring'), hint: t('campo', 'field') },
-    { key: 'calendario', label: t('Histórico', 'History') },
-    { key: 'campo', label: t('Campo y Telegram', 'Field & Telegram') },
+    { key: 'mapa', label: t('Mapa', 'Map') },
+    { key: 'calendario', label: t('Historial', 'History') },
+    { key: 'campo', label: t('Telegram y estado', 'Telegram & status') },
   ]
   const [meta, setMeta] = useState(null)
   const [state, setState] = useState(null)
@@ -36,7 +36,7 @@ function AppContent() {
   const [alertLoading, setAlertLoading] = useState(true)
   const [dateRef, setDateRef] = useState('')
   const [hotspots, setHotspots] = useState(null)
-  const [mapLayer, setMapLayer] = useState('history')
+  const [mapLayer, setMapLayer] = useState('recent')
   const [mapSource, setMapSource] = useState('both')
   const [highConfidence, setHighConfidence] = useState(false)
   const [recentTick, setRecentTick] = useState(0)
@@ -247,7 +247,7 @@ function AppContent() {
         <div className="mx-auto flex max-w-[1500px] items-center justify-between overflow-x-auto px-4 sm:px-6">
           <Tabs items={TABS} value={tab} onChange={setTab} />
           <p className="hidden text-[11px] text-zinc-600 md:block">
-            {zoneName} · {t('datos hasta', 'data through')} {meta?.coverage.end ?? '…'} · {years.length || '—'} {t('años', 'years')}
+            {zoneName} · {t('histórico hasta', 'historical data through')} {meta?.coverage.end ?? '…'} · {years.length || '—'} {t('años', 'years')}
           </p>
         </div>
       </div>
@@ -256,11 +256,12 @@ function AppContent() {
         <div className="mb-6 flex flex-col justify-between gap-4 border-b border-white/[0.07] pb-5 sm:flex-row sm:items-end">
           <div>
             <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.2em] text-orange-300">NASA FIRMS · MODIS + VIIRS · {zoneName || 'Perú'}</p>
-            <h1 className="text-[25px] font-semibold tracking-tight text-white sm:text-[32px]">{t('Del dato satelital a la acción en campo.', 'From satellite data to action in the field.')}</h1>
-            <p className="mt-2 max-w-2xl text-[13px] leading-relaxed text-zinc-400">{tab === 'calendario' ? t('Comprende el comportamiento histórico y detecta temporadas atípicas.', 'Explore historical patterns and unusual seasons.') : tab === 'campo' ? t('Consulta información NRT almacenada, geocercas y verificaciones de campo.', 'Review stored NRT data, geofences and field reports.') : t('Explora focos detectados, filtra el territorio y orienta la verificación operativa.', 'Explore detections, filter the territory and support field verification.')}</p>
+            <h1 className="text-[25px] font-semibold tracking-tight text-white sm:text-[32px]">{t('Información satelital para bomberos y brigadas', 'Satellite information for firefighters and field teams')}</h1>
+            <p className="mt-2 max-w-2xl text-[13px] leading-relaxed text-zinc-300">{tab === 'calendario' ? t('Consulta temporadas y compara años anteriores. El historial es independiente de los datos recientes.', 'Explore seasons and compare past years. Historical data are separate from recent data.') : tab === 'campo' ? t('Revisa los datos recientes guardados y las ubicaciones registradas para avisos en Telegram.', 'Review saved recent data and locations registered for Telegram alerts.') : t('Elige tu zona y revisa los puntos recientes en el mapa. Consulta la fecha antes de usarlos.', 'Choose your area and review recent points on the map. Check their date before using them.')}</p>
           </div>
-          <div className="flex items-center gap-2 self-start rounded-full border border-emerald-400/20 bg-emerald-400/[0.06] px-3 py-1.5 text-[11px] text-emerald-200 sm:self-auto">
-            <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" /> {t('Cobertura histórica hasta', 'Historical coverage through')} {meta?.coverage.end || '—'}
+          <div className="self-start rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 text-[11px] text-zinc-300 sm:self-auto">
+            <span className="block font-medium text-zinc-200">{t('Última fecha del archivo histórico', 'Latest date in historical file')}: {meta?.coverage.end || '—'}</span>
+            <span className="block text-zinc-400">{t('Los datos recientes se muestran por separado en el mapa.', 'Recent data are shown separately on the map.')}</span>
           </div>
         </div>
         <div aria-live="polite" className="sr-only">
@@ -353,17 +354,17 @@ function AppContent() {
           </div>
 
           <div className="space-y-3">
+            <section className="card border-orange-400/25 p-4" aria-labelledby="quick-guide-title">
+              <h2 id="quick-guide-title" className="text-sm font-semibold text-white">{t('Cómo usar el mapa', 'How to use the map')}</h2>
+              <ol className="mt-2 space-y-1.5 text-[12px] leading-relaxed text-zinc-300">
+                <li>{t('1. Elige tu zona arriba y revisa la fecha de descarga.', '1. Choose your area above and check the download date.')}</li>
+                <li>{t('2. Toca un punto para ver su fecha, ubicación y sensor.', '2. Select a point to see its date, location and sensor.')}</li>
+                <li>{t('3. Verifica la información en campo y con fuentes oficiales.', '3. Verify the information in the field and with official sources.')}</li>
+              </ol>
+              <p className="mt-3 text-[11px] leading-relaxed text-amber-200">{t('Un punto de calor no confirma un incendio. Los datos pueden tener retraso; no son una alerta oficial.', 'A heat detection does not confirm a fire. Data may be delayed and are not an official warning.')}</p>
+            </section>
             <AssistantPanel zoneParams={zoneParams} zoneName={zoneName} />
             <AlertStrip alert={alert} loading={alertLoading} dateRef={dateRef} setDateRef={setDateRef} zoneName={zoneName} />
-            <section className="card p-4">
-              <h2 className="label">{t('Qué mirar aquí', 'What to look for')}</h2>
-              <p className="mt-2 text-[12px] leading-relaxed text-zinc-400">
-                {t('Los puntos son detecciones del periodo elegido. Dibuja un recuadro para analizar solo esa zona: el calendario y las cifras se recalculan para el área dibujada.', 'Points are detections from the selected period. Draw a box to recalculate the calendar and figures for that area.')}
-              </p>
-              <p className="mt-2 text-[10.5px] leading-snug text-zinc-600">
-                {t('Un píxel de fuego no es un incendio confirmado: puede ser quema agrícola, una fuente industrial o una falsa alarma.', 'A heat detection is not a confirmed fire; it may be agricultural burning, an industrial source or a false alarm.')}
-              </p>
-            </section>
           </div>
         </div>
 

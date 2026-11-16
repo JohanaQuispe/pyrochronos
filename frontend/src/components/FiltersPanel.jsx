@@ -78,7 +78,7 @@ export default function FiltersPanel({ open, onClose, state, setState, years }) 
             />
           </Row>
 
-          <Row title={t('Medida', 'Measure')} hint={t('Celdas-día: cuántas celdas de ~1 km² tuvieron fuego. Focos: detecciones crudas.', 'Cell-days: grid cells with detections per day. Hotspots: raw detections.')}>
+          <Row title={t('Medida', 'Measure')} hint={t('Celdas-día: celdas de ~1 km² con detecciones por día. Focos: detecciones sin armonizar.', 'Cell-days: grid cells with detections per day. Hotspots: raw detections.')}>
             <Segmented
               name={t('Medida', 'Measure')}
               value={state.measure}
@@ -87,7 +87,7 @@ export default function FiltersPanel({ open, onClose, state, setState, years }) 
             />
           </Row>
 
-          <Row title={t('Fuente', 'Source')} hint={t('Solo para verificar: muestra un satélite aislado. El calendario se armoniza siempre con ambos.', 'Choose an individual satellite or the harmonized series.')}>
+          <Row title={t('Fuente', 'Source')} hint={t('Elige un satélite para ver sus observaciones o ambos para ver la serie armonizada.', 'Choose an individual satellite or the harmonized series.')}>
             <select
               className="input w-full"
               aria-label={t('Fuente satelital', 'Satellite source')}
