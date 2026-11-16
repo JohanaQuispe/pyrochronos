@@ -1,144 +1,81 @@
-# PyroChronos · calendario de fuego para brigadas de bomberos
+# PyroChronos 🔥
 
-Aplicación web y bot de Telegram que **armonizan los focos de calor de MODIS y VIIRS** (NASA FIRMS)
-en un único calendario, para que una brigada de bomberos pueda saber en menos de un minuto
-**cuándo empieza su temporada de fuego**, **si este año viene más fuerte que los anteriores** y
-**dónde mirar primero**.
+PyroChronos reúne detecciones de calor de **MODIS y VIIRS** de NASA FIRMS para ayudar a bomberos y brigadas a explorar la actividad en Perú. Ofrece un mapa de datos recientes, un calendario histórico y un bot de Telegram que puede avisar sobre detecciones cercanas.
 
-- Reto: *Harmonization of MODIS and VIIRS Hot Spots* — NASA Space Apps Challenge 2026.
-- Datos reales: Perú, MODIS desde 2000-11 y VIIRS S-NPP desde 2012, hasta 2025-12-31.
-- **No es detección en tiempo real ni predicción.** Es análisis histórico y detección satelital con
-  ~3 h de latencia que **pide confirmación en campo**.
+> Un foco de calor **no confirma un incendio**. Los datos pueden tener retraso y no reemplazan la verificación en campo ni los avisos oficiales. PyroChronos no predice incendios.
 
-## Para quién es
+## Qué puedes hacer
 
-**Brigadas de bomberos forestales y comités de emergencia** de zonas con temporada seca marcada
-(Perú y sus regiones amazónicas). Guardaparques, agricultores y municipios son el siguiente alcance,
-en ese orden: el motor ya les serviría, pero **no están validados** con ellos todavía.
-Detalle completo en [`docs/publico-objetivo.md`](docs/publico-objetivo.md).
+- **Mapa:** seleccionar una zona y consultar los datos recientes guardados o el historial. Revisa siempre la fecha de descarga.
+- **Historial:** comparar meses y años. Algunas cifras son estimadas y los totales y rankings son provisionales.
+- **Telegram:** compartir una ubicación en privado y elegir la distancia para recibir avisos de detecciones que cumplan el umbral de intensidad. El bot debe estar funcionando y tener datos recientes.
+- **Informes:** descargar datos y abrir un informe imprimible. La interfaz está disponible en español e inglés.
 
-## Lo que hace hoy (verificado con datos reales)
+## Probar la web en tu computadora
 
-| Función | Estado |
-|---|---|
-| Descarga y normalización de los CSV de FIRMS (confianza unificada 0/1/2) | funciona |
-| Cuadrícula común de 0,01° y medida principal **celdas-día con fuego** | funciona |
-| Armonización MODIS+VIIRS con factor, incertidumbre y concordancia | funciona |
-| Calendario de calor (años × meses / años × semanas) con anomalías | funciona |
-| Mapa con focos del periodo y dibujo de zona | funciona |
-| Tarjetas: mes y año más activos, último mes vs mediana, total de focos | funciona |
-| Gráfico del año frente a la mediana con banda de percentiles 25–75 | funciona |
-| Descarga CSV de focos y CSV de la serie armonizada | funciona |
-| Resumen en lenguaje simple (plantillas, sin IA generativa) | funciona |
-| **Semáforo de temporada** (aviso anticipado con la historia de la zona) | funciona |
-| **Reporte ejecutivo imprimible** (PDF desde el navegador) | funciona |
-| Boletín y vigilancia automática por Telegram (token solo en el servidor) | funciona en simulación |
-| Modo reciente (NRT, latencia ~3 h) | implementado; requiere `FIRMS_MAP_KEY` y salida a internet |
+Necesitas **Python 3.11 o posterior** y conexión a internet para instalar las dependencias y cargar el mapa base. El repositorio incluye un archivo histórico de ejemplo; no necesitas una clave de NASA para explorar ese historial. La fecha disponible aparece en la web. Este archivo es distinto al usado para la validación local de la participante.
 
-## Cómo correrlo
+En Windows, abre PowerShell en la carpeta del proyecto:
+
+```powershell
+python -m venv .venv
+.\.venv\Scripts\python.exe -m pip install -r requirements.txt
+.\.venv\Scripts\python.exe -m uvicorn api.main:app --app-dir backend --host 127.0.0.1 --port 8000
+```
+
+En macOS o Linux:
 
 ```bash
-# 1) entorno
-python3 -m venv .venv && . .venv/bin/activate
-pip install -r requirements.txt
-
-# 2) datos (dos opciones)
-python backend/scripts/download_history.py --country Peru --years 2000-2025   # ~40 archivos, sin clave
-#   o usa tus CSV ya descargados en data/raw/
-python backend/scripts/build_dataset.py --raw data/raw
-
-# 3) frontend
-cd frontend && npm install && npm run build && cd ..
-
-# 4) servidor (sirve la web y la API en el mismo puerto)
-python -m uvicorn api.main:app --app-dir backend --host 0.0.0.0 --port 8000
+python3 -m venv .venv
+.venv/bin/python -m pip install -r requirements.txt
+.venv/bin/python -m uvicorn api.main:app --app-dir backend --host 127.0.0.1 --port 8000
 ```
 
-Abre `http://localhost:8000`. Documentación interactiva de la API en `/api/docs`.
+Abre **http://127.0.0.1:8000**. La versión compilada de la web ya viene incluida; no necesitas Node.js para esta prueba. Para detener el servidor, pulsa `Ctrl + C` en su terminal.
 
-### Zonas no precargadas
+La capa de datos recientes aparece vacía si no hay una descarga guardada. Eso **no significa que no haya focos**. El calendario histórico y los datos recientes son independientes.
+
+## Probar el bot y los datos recientes (opcional)
+
+Necesitas una [clave de NASA FIRMS](https://firms.modaps.eosdis.nasa.gov/api/map_key/) y un bot de Telegram creado con BotFather. Copia `.env.example` como `.env` **solo si aún no tienes uno** y completa `FIRMS_MAP_KEY` y `TELEGRAM_BOT_TOKEN` en tu computadora. No publiques ese archivo ni compartas tus claves. `TELEGRAM_CHAT_ID` se usa para la demo de envío, no es necesario para la vigilancia por ubicación.
+
+En otra terminal, desde la carpeta del proyecto, con el entorno virtual instalado:
+
+```powershell
+# Windows
+.\.venv\Scripts\python.exe backend\scripts\bot.py --poll --auto-refresh --zone peru
+```
 
 ```bash
-export FIRMS_MAP_KEY=tu_clave      # nunca en el código ni en el navegador
-python backend/scripts/download_zone.py --bbox -70.6,-13.4,-68.6,-11 --years 2025-2026
-python backend/scripts/build_dataset.py --raw data/raw
+# macOS / Linux
+.venv/bin/python backend/scripts/bot.py --poll --auto-refresh --zone peru
 ```
 
-### Pruebas
+En el chat **privado** del bot, envía `/start`, comparte tu ubicación y elige la distancia. El proceso intenta actualizar FIRMS y revisar las detecciones aproximadamente cada 15 minutos. Para recibir también una confirmación de cada revisión en el chat privado, añade `--heartbeat` al comando. Usa una sola instancia del bot a la vez.
 
-```bash
-python -m pytest backend/tests -q      # 53 pruebas: normalización, armonización, anomalías, API, campo y POWER
-cd frontend && npm run smoke           # monta la interfaz en jsdom y comprueba que renderiza sin errores
-```
+La participante comprobó la llegada de confirmaciones periódicas a Telegram. La entrega automática de una **alerta real por una detección cercana** aún está pendiente de comprobar. Si el equipo se apaga, se suspende o pierde conexión, el bot deja de vigilar. Los avisos no cubren todas las detecciones ni garantizan disponibilidad o entrega.
 
-### ¿No funciona algo? Un solo comando
+Guía de prueba y diagnóstico: [comprobación de alertas](docs/comprobacion-alerta-real.md).
 
-```bash
-python backend/scripts/doctor.py     # dice qué falta y cuál es el siguiente paso
-```
+## Datos y validación
 
-### Semáforo de temporada y avisos (opcional)
+La aplicación compara las fuentes sobre una cuadrícula común. Para los periodos con un solo sensor utiliza factores separados para estimar la unión; si no hay calibración VIIRS suficiente, no inventa un valor. Las cifras dependen del archivo, la zona y el periodo.
 
-```bash
-python backend/scripts/alert.py --zone madrededios          # semáforo en la terminal
-python backend/scripts/telegram_setup.py --guide             # crear el bot en @BotFather
-python backend/scripts/telegram_setup.py --check             # ¿el token funciona?
-python backend/scripts/telegram_setup.py --chat-id           # descubrir tu chat_id
-python backend/scripts/telegram_setup.py --write-env --test   # guardar en .env y probar
-python backend/scripts/watch_alerts.py --zones peru,madrededios --send
-```
+Con su propio archivo de **2 212 061 detecciones**, la participante comunicó una validación mensual para Perú de 14 años (2012–2025): la mediana del error absoluto anual de VIIRS hacia la unión satelital fue **1,02 %**. Esta comparación no es una medición de incendios confirmados ni valida otros periodos o zonas. El archivo de ejemplo del repositorio produce otros resultados.
 
-El bot se crea a mano en **@BotFather** (Telegram no permite crearlo por API); el resto lo hace
-`telegram_setup.py` sin imprimir nunca el token completo.
+- [Método y límites](docs/metodologia.md)
+- [Validación VIIRS](docs/validacion-viirs.md) y [validación MODIS](docs/validacion-retrospectiva.md)
+- [Procedencia de los datos](docs/procedencia.md)
+- [Declaración de uso de IA](docs/ia.md)
 
-### Modo campo: geocercas y bot (opcional)
+## Privacidad y licencia
 
-```bash
-python backend/scripts/bot.py --dry-run                  # el aviso, sin enviar nada
-python backend/scripts/bot.py --send-demo                # ejemplo marcado DEMO
-python backend/scripts/bot.py --poll                     # avisa si un foco cae en tu radio
-python backend/scripts/download_power.py --zone madrededios --years 5   # contexto NASA POWER
-```
+Las ubicaciones, verificaciones e historial de envíos se guardan localmente. **No publiques la aplicación sin proteger el acceso a esos datos**: ocultarlos en la pantalla no protege la API. El bot envía mensajes y ubicaciones de detecciones a Telegram; el mapa base usa OpenStreetMap.
 
-Detalles, comandos del bot y límites en [`docs/campo.md`](docs/campo.md).
-Guía completa de configuración (BotFather, `.env`, checklist) en [`docs/bot-paso-a-paso.md`](docs/bot-paso-a-paso.md).
+El archivo de ejemplo `data/derived/detections.parquet` está versionado. Si lo reemplazas con datos propios, Git verá el cambio: revisa `git status` antes de subir nada y no publiques datos sensibles ni `.env`. No es necesario reconstruir el archivo para probar la web.
 
-### Focos recientes (NRT, ~3 h de latencia)
+Código bajo [licencia MIT](LICENSE). Detecciones de NASA FIRMS; límites departamentales simplificados con sus [atribuciones y licencia](data/geo/README.md).
 
-```bash
-export FIRMS_MAP_KEY=...
-python backend/scripts/download_recent.py --zone madrededios --days 3
-```
+---
 
-Detalles, reglas y límites en [`docs/alertas.md`](docs/alertas.md).
-
-## Arquitectura por capas
-
-```
-descarga      backend/scripts/download_history.py | download_zone.py
-normalización backend/pyro/normalize.py    (esquema común: fecha, lat, lon, fuente, confianza 0/1/2, FRP, tipo)
-cuadrícula    backend/pyro/grid.py         (celdas-día, series semanales y mensuales)
-armonización  backend/pyro/harmonize.py    (factor VIIRS/MODIS, incertidumbre, concordancia)
-anomalías     backend/pyro/anomalies.py    (percentiles leave-one-out, ventana ±1)
-API           backend/api/main.py          (FastAPI)
-interfaz      frontend/src                 (React + Vite + Tailwind + Leaflet)
-almacén       backend/pyro/store.py        (Parquet hoy; la lógica no depende del motor)
-```
-
-Todo lo configurable está en **`config.yaml`**: zona, tamaño de celda, confianza mínima,
-tipos de fuente excluidos, ventana de solape, umbrales de anomalía, límites de la API.
-
-## Documentación
-
-- [`docs/metodologia.md`](docs/metodologia.md) — cómo se armoniza, con fórmulas y límites.
-- [`docs/alertas.md`](docs/alertas.md) — semáforo de temporada, modo reciente y avisos por Telegram.
-- [`docs/campo.md`](docs/campo.md) — geocercas, pines, validación humana y contexto NASA POWER.
-- [`docs/arquitectura-tactica.md`](docs/arquitectura-tactica.md) — esquema PostGIS y diseño de la capa táctica.
-- [`docs/procedencia.md`](docs/procedencia.md) — de dónde salen los datos, con fechas y hashes.
-- [`docs/ia.md`](docs/ia.md) — declaración de uso de IA.
-- [`docs/pitch.md`](docs/pitch.md) — guion de 3 minutos y cómo hacer la demo.
-- [`docs/verificado.md`](docs/verificado.md) — qué está verificado y qué queda POR VERIFICAR.
-
-## Licencia
-
-MIT (ver `LICENSE`). Datos: NASA FIRMS, dominio público. Sin logos ni marcas de terceros.
+**Cambiando vidas, un fueguito menos a la vez. 🔥**

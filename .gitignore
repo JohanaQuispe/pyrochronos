@@ -11,7 +11,11 @@ data/raw/
 
 # artefactos
 .pytest_cache/
+/frontend/dist/
 *.log
+
+# copias locales de importación (el parquet principal está versionado)
+data/derived/detections_antes_*.parquet
 
 # estado de ejecucion (semaforo, avisos enviados)
 data/derived/alert_state.json
