@@ -35,9 +35,15 @@ Abre **http://127.0.0.1:8000**. La versión compilada de la web ya viene incluid
 
 La capa de datos recientes aparece vacía si no hay una descarga guardada. Eso **no significa que no haya focos**. El calendario histórico y los datos recientes son independientes.
 
-## Probar el bot y los datos recientes (opcional)
+## Crear y ejecutar tu propio bot (opcional)
 
-Necesitas una [clave de NASA FIRMS](https://firms.modaps.eosdis.nasa.gov/api/map_key/) y un bot de Telegram creado con BotFather. Copia `.env.example` como `.env` **solo si aún no tienes uno** y completa `FIRMS_MAP_KEY` y `TELEGRAM_BOT_TOKEN` en tu computadora. No publiques ese archivo ni compartas tus claves. `TELEGRAM_CHAT_ID` se usa para la demo de envío, no es necesario para la vigilancia por ubicación.
+Para probar el bot con tu propia cuenta:
+
+1. Obtén una [clave de NASA FIRMS](https://firms.modaps.eosdis.nasa.gov/api/map_key/).
+2. Abre [BotFather](https://t.me/BotFather) en Telegram y sigue sus instrucciones para crear un bot y obtener su token.
+3. En la carpeta del proyecto, copia `.env.example` como `.env` **solo si aún no tienes uno**. Completa `FIRMS_MAP_KEY` y `TELEGRAM_BOT_TOKEN` en tu computadora.
+
+No publiques `.env` ni compartas tus claves. `TELEGRAM_CHAT_ID` solo se usa para la demo de envío, no es necesario para la vigilancia por ubicación. Para más detalles, consulta la [guía paso a paso](docs/bot-paso-a-paso.md).
 
 En otra terminal, desde la carpeta del proyecto, con el entorno virtual instalado:
 
