@@ -62,7 +62,7 @@ def main() -> int:
     bbox = cfg.zone_bbox()
     print("\nAgregando por celda × día …")
     daily = grid.daily_counts(ds.cells, df, bbox, cfg.cell_deg)
-    print(f"  celdas-día con fuego (unión, sin duplicar): {int(daily['union_cd'].sum()):,}")
+    print(f"  celdas-día con detecciones (unión, sin duplicar): {int(daily['union_cd'].sum()):,}")
     print(f"  celdas-día MODIS: {int(daily['modis_cd'].sum()):,} · VIIRS: {int(daily['viirs_cd'].sum()):,}")
 
     for medida in ("cell_days", "detections"):
